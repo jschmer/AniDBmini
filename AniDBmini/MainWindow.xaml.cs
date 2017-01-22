@@ -605,20 +605,49 @@ namespace AniDBmini
 
         #region Hashing Tab
 
+        static List<string> ListFiles(string sDir)
+        {
+            List<string> files = new List<string>();
+            foreach (string f in Directory.GetFiles(sDir))
+            {
+                FileInfo fi = new FileInfo(f);
+                if (!fi.Attributes.HasFlag(FileAttributes.Directory))
+                    files.Add(f);
+            }
+            foreach (string d in Directory.GetDirectories(sDir))
+            {
+                files.AddRange(ListFiles(d));
+            }
+            return files;
+        }
+
         private void hashingListBox_Drop(object sender, DragEventArgs e)
         {
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
             {
-                string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
-                Array.Sort(files);
+                string[] paths = (string[])e.Data.GetData(DataFormats.FileDrop);
+                Array.Sort(paths);
 
-                for (int i = 0; i < files.Length; i++)
+                foreach (var path in paths)
                 {
-                    FileInfo fi = new FileInfo(files[i]);
+                    List<string> all_files = new List<string>();
+                    FileInfo fi = new FileInfo(path);
+                    if (fi.Attributes.HasFlag(FileAttributes.Directory))
+                    {
+                        all_files.AddRange(ListFiles(path));
+                    }
+                    else
+                    {
+                        all_files.Add(path);
+                    }
 
-                    if (allowedVideoFiles.Contains<string>("*" + fi.Extension.ToLower()))
-                        lock (m_hashingLock)
-                            addRowToHashTable(fi.FullName);
+                    foreach (var file in all_files)
+                    {
+                        fi = new FileInfo(file);
+                        if (allowedVideoFiles.Contains<string>("*" + fi.Extension.ToLower()))
+                            lock (m_hashingLock)
+                                addRowToHashTable(fi.FullName);
+                    }
                 }
             }
         }
