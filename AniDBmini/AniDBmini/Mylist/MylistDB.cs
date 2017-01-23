@@ -247,6 +247,70 @@ namespace AniDBmini
             return _temp;
         }
 
+        /// <summary>
+        /// Select the file of a hash result.
+        /// </summary>
+        /// <param name="ed2k_hash">ED2K Hash of file</param>
+        /// <param name="filepath">Filepath</param>
+        /// <returns>FileEntry object</returns>
+        public FileEntry SelectFile(string ed2k_hash, string filepath)
+        {
+            FileEntry _temp = new FileEntry();
+
+            using (SQLiteCommand cmd = new SQLiteCommand(SQLConn))
+            {
+                cmd.CommandText = @"SELECT f.*, g.*, e.epno, e.spl_epno FROM files AS f
+                                      JOIN episodes AS e ON e.eid = f.eid
+                                 LEFT JOIN groups AS g ON g.gid = f.gid
+                                     WHERE f.ed2k = @ed2k
+                                       AND f.path = @filepath
+                                  ORDER BY g.group_abbr;";
+                cmd.Parameters.AddWithValue("@ed2k", ed2k_hash);
+                cmd.Parameters.AddWithValue("@filepath", filepath);
+
+                using (SQLiteDataReader reader = cmd.ExecuteReader())
+                    if (reader.HasRows && reader.Read())
+                    {
+                        FileEntry f = new FileEntry(reader);
+                        f.PropertyChanged += (s, e) => { UpdateFile(f); };
+                        _temp = f;
+                    }
+            }
+
+            return _temp;
+        }
+
+        /// <summary>
+        /// Select the episode of a file.
+        /// </summary>
+        /// <param name="file">FileEntry object</param>
+        /// <returns>EpisodeEntry object</returns>
+        public EpisodeEntry SelectEpisodeForFile(FileEntry file)
+        {
+            EpisodeEntry _temp = new EpisodeEntry();
+
+            if (file.eid == 0)
+                return _temp;
+
+            using (SQLiteCommand cmd = new SQLiteCommand(SQLConn))
+            {
+                cmd.CommandText = @"SELECT e.*, IFNULL(SUM(f.length), 0) AS length, IFNULL(SUM(f.size), 0) AS size,
+                                           f.generic, IFNULL(COUNT(f.eid), 0) as hasFiles
+                                      FROM episodes AS e
+                                 LEFT JOIN files AS f ON f.eid = e.eid
+                                     WHERE e.eid = @eid
+                                  ORDER BY IFNULL(e.epno, 'S'), spl_epno;";
+                cmd.Parameters.AddWithValue("@eid", file.eid);
+
+                using (SQLiteDataReader reader = cmd.ExecuteReader())
+                    if (reader.HasRows && reader.Read())
+                        _temp = new EpisodeEntry(reader);
+            }
+
+            return _temp;
+        }
+
+
         public AnimeEntry SelectAnimeFromFile(int fid)
         {
             AnimeEntry anime = null;

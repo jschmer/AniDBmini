@@ -262,17 +262,47 @@ namespace AniDBmini
         {
             ppSize += item.Size;
 
+            // does item already exist in database?
+            FileEntry file = m_myList.SelectFile(item.Hash, item.Path);
+
             if (addToMyListCheckBox.IsChecked == true)
             {
                 item.Watched = (bool)watchedCheckBox.IsChecked;
                 item.State = stateComboBox.SelectedIndex;
 
-                m_aniDBAPI.MyListAdd(item);
+                EpisodeEntry epEntry = m_myList.SelectEpisodeForFile(file);
+
+                if ( epEntry.eid != 0 && 
+                    ( epEntry.watched != item.Watched
+                      || file.state != item.State) )
+                {
+                    // Episode info already exists in database, update MyList data
+                    item.Edit = true;
+                    m_aniDBAPI.MyListAdd(item);
+                }
+                else if ( epEntry.eid != 0 )
+                {
+                    // Episode info already exist and no changes needed
+                    AniDBAPI.AppendDebugLine(String.Format("Episode entry already exists, skipping: {0}", file.path));
+                }
+                else
+                {
+                    // Episode info does not exist, add to MyList
+                    m_aniDBAPI.MyListAdd(item);
+                }
+
+            }
+            else if (file.fid != 0)
+            {
+                // File already exists in database -> done
+                AniDBAPI.AppendDebugLine(String.Format("File entry already exists, skipping: {0}", file.path));
             }
             else
             {
                 m_aniDBAPI.File(item);
             }
+
+            
         }
 
         #endregion Hashing

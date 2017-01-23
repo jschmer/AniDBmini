@@ -535,7 +535,7 @@
                             <CheckBox Content="Add to mylist" Height="16" HorizontalAlignment="Left" Margin="6,6,0,0" x:Name="addToMyListCheckBox"
                                       VerticalAlignment="Top" IsChecked="True" IsEnabled="True" BorderThickness="1"/>
                             <CheckBox Content="Watched" Height="16" HorizontalAlignment="Left" Margin="6,0,0,6" x:Name="watchedCheckBox"
-                                      VerticalAlignment="bottom" BorderThickness="1"/>
+                                      VerticalAlignment="bottom" BorderThickness="1" IsChecked="True" />
                             <ComboBox Grid.Column="1" Height="24" Margin="6,6,6,0" x:Name="stateComboBox" VerticalAlignment="Top">
                                 <ComboBoxItem Content="Unknown"/>
                                 <ComboBoxItem Content="Internal storage (HDD)" IsSelected="True"/>
