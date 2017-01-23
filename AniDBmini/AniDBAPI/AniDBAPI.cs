@@ -240,8 +240,8 @@ namespace AniDBmini
         private MainWindow mainWindow;
 		private Ed2k hasher = new Ed2k();
 
-        private UdpClient conn = new UdpClient();
-        private IPEndPoint apiserver;
+        private UdpClient conn;
+        private IPEndPoint apiserver = new IPEndPoint(IPAddress.None, 0);
         private DateTime m_lastCommand;
 
         private Object queueLock = new Object();
@@ -282,7 +282,11 @@ namespace AniDBmini
                 try
                 {
 #if !MOCK_REMOTE_API
-                    conn.Connect(server, port);
+                    conn = new UdpClient(localPort);
+                    conn.Client.SendTimeout = 5000;
+                    conn.Client.ReceiveTimeout = 5000;
+                    // api.anidb.net:9000
+                    conn.Connect("api.anidb.net", 9000);
 #endif
                     isConnected = true;
                 }
