@@ -51,7 +51,7 @@
 
         <ControlTemplate x:Key="OptionsButtonTemplate" TargetType="{x:Type Button}">
             <Grid>
-                <Image x:Name="Img" Source="Resources/options.png" Width="24" Height="24" VerticalAlignment="Center" Panel.ZIndex="1">
+                <Image x:Name="Img" Source="Resources/options.png" Width="Auto" Height="16" VerticalAlignment="Center" Panel.ZIndex="1" Margin="50,10,58,9">
                     <Image.RenderTransformOrigin>
                         <Point X="0.5" Y="0.5"/>
                     </Image.RenderTransformOrigin>
@@ -62,7 +62,7 @@
                         <RotateTransform CenterX="0.5" CenterY="0.5"/>
                     </Image.LayoutTransform>
                 </Image>
-                <Image x:Name="ImgBlur" Source="Resources/options.png" Width="24" Height="24" Opacity="0">
+                <Image x:Name="ImgBlur" Source="Resources/options.png" Width="17" Height="17" Opacity="0">
                     <Image.RenderTransform>
                         <ScaleTransform ScaleX="1.3" ScaleY="1.3"/>
                     </Image.RenderTransform>
@@ -94,8 +94,8 @@
         <!-- #region RandomButtonTemplate -->
 
         <ControlTemplate x:Key="RandomButtonTemplate" TargetType="{x:Type Button}">
-            <Grid>
-                <Image x:Name="Img" Source="Resources/random.png" Width="24" Height="24" VerticalAlignment="Center" Panel.ZIndex="1">
+            <Grid Height="17" Width="17">
+                <Image x:Name="Img" Source="Resources/random.png" Width="Auto" Height="17" VerticalAlignment="Center" Panel.ZIndex="1" Margin="0,-1,0,1">
                     <Image.RenderTransformOrigin>
                         <Point X="0.5" Y="0.5"/>
                     </Image.RenderTransformOrigin>
@@ -185,7 +185,7 @@
         <!-- #endregion Buttons -->
 
         <!-- #region Hashing -->
-        
+
         <ContextMenu x:Key="hashingListBoxItemContextMenu">
             <MenuItem Header="Remove selected" Click="removeSelectedHashItems" InputGestureText="Del"/>
             <MenuItem Header="Clear list" Click="clearHashItems"/>
@@ -193,9 +193,9 @@
         <Style x:Key="hashingListBoxItemStyle" TargetType="{x:Type ListBoxItem}">
             <Setter Property="ContextMenu" Value="{StaticResource hashingListBoxItemContextMenu}"/>
         </Style>
-        
+
         <!-- #endregion Hashing -->
-        
+
         <!-- #region Mylist -->
 
         <ContextMenu x:Key="EntryContextMenu">
@@ -232,7 +232,7 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        
+
         <Style TargetType="{x:Type DataGridRowHeader}">
             <Setter Property="Width" Value="0"/>
         </Style>
@@ -413,8 +413,8 @@
 
     </Window.Resources>
     <Grid>
-        <Button Template="{StaticResource OptionsButtonTemplate}" Click="ShowOpionsWindow" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,5" Panel.ZIndex="1" ToolTip="Options"/>
-        <Button Template="{StaticResource RandomButtonTemplate}" Click="randomAnimeButton_Click" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="74,5" Panel.ZIndex="1" ToolTip="Random Anime">
+        <Button Template="{StaticResource OptionsButtonTemplate}" Click="ShowOpionsWindow" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-35,0,0,0" Panel.ZIndex="1" ToolTip="Options"/>
+        <Button Template="{StaticResource RandomButtonTemplate}" Click="randomAnimeButton_Click" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-13,10,0,0"  Panel.ZIndex="1" ToolTip="Random Anime" Width="127">
             <Button.ContextMenu>
                 <ContextMenu>
                     <MenuItem Header="Watched" Tag="1" Click="randomAnimeLabelContextMenuItem_Click"/>
@@ -430,7 +430,7 @@
         </StackPanel>
         <TabControl x:Name="mainTabControl" Margin="5" SelectionChanged="mainTabControl_SelectionChanged">
             <TabItem Width="96" IsEnabled="False" Focusable="False" Visibility="Hidden" Height="28"/>
-            <TabItem Header="Home" IsSelected="True" TextOptions.TextFormattingMode="Display">
+            <TabItem Header="Home" IsSelected="True" TextOptions.TextFormattingMode="Display" Margin="-32,-2,28,-1">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="300"/>
@@ -451,7 +451,7 @@
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
-                                </ItemsControl>
+                            </ItemsControl>
                         </Grid>
                     </GroupBox>
                     <Label Margin="0,320,0,0" >Pending API calls:</Label>
@@ -484,7 +484,7 @@
                     </GroupBox>
                 </Grid>
             </TabItem>
-            <TabItem Header="Hashing" x:Name="hashinTabItem">
+            <TabItem Header="Hashing" x:Name="hashinTabItem" Margin="-28,-2,24,-1">
                 <Grid HorizontalAlignment="Center">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="345"/>
@@ -555,7 +555,7 @@
                             Grid.Row="1" IsEnabled="False" Height="28" VerticalAlignment="bottom" Grid.Column="2" Click="hashingStopButton_Click"/>
                 </Grid>
             </TabItem>
-            <TabItem Header="Mylist">
+            <TabItem Header="Mylist" Margin="-24,-2,20,-1">
                 <Grid>
                     <Button x:Name="MylistImortButton" VerticalAlignment="Center" HorizontalAlignment="Center" Height="80" Width="380" Template="{StaticResource ImportListButtonTemplate}" Content="Import Mylist" Click="ImportList_Click" Panel.ZIndex="1"/>
                     <Border Background="#9FFF" BorderBrush="#CCC" CornerRadius="2" BorderThickness="1">
@@ -797,13 +797,13 @@
 
                                         <TextBlock Text="English Title" HorizontalAlignment="Right" FontSize="32" FontFamily="Segoe UI" Grid.Row="2" FontWeight="Bold" Foreground="{StaticResource AnimeBigTextGradient}"/>
                                         <TextBlock Text="{Binding English}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Grid.Row="2" FontSize="16" Margin="0,0,10,-2" Effect="{StaticResource AnimeSmallTextEffect}"/>
-                                        
+
                                         <TextBlock Text="Episodes" HorizontalAlignment="Right" FontSize="32" Grid.Row="3" FontFamily="Segoe UI" FontWeight="Bold" Foreground="{StaticResource AnimeBigTextGradient}"/>
                                         <TextBlock Text="{Binding Eps}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Grid.Row="3" FontSize="16" Margin="0,0,10,-2" Effect="{StaticResource AnimeSmallTextEffect}"/>
 
                                         <TextBlock Text="{Binding AirDateText}" HorizontalAlignment="Right" FontSize="32" Grid.Row="4" FontFamily="Segoe UI" FontWeight="Bold" Foreground="{StaticResource AnimeBigTextGradient}"/>
                                         <TextBlock Text="{Binding StartDate}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Grid.Row="4" FontSize="16" Margin="0,0,10,-2" Effect="{StaticResource AnimeSmallTextEffect}"/>
-                                        
+
                                         <TextBlock Text="End Date" HorizontalAlignment="Right" FontSize="32" Grid.Row="5" FontFamily="Segoe UI" FontWeight="Bold" Foreground="{StaticResource AnimeBigTextGradient}"/>
                                         <TextBlock Text="{Binding EndDate}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Grid.Row="5" FontSize="16" Margin="0,0,10,-2" Effect="{StaticResource AnimeSmallTextEffect}"/>
 
