@@ -5,7 +5,7 @@
         xmlns:l="clr-namespace:AniDBmini"
         xmlns:lc="clr-namespace:AniDBmini.Collections"
         Background="{DynamicResource WindowBackgroundBrush}"
-        Title="AniDBmini" Height="480" Width="850" Icon="/AniDBmini;component/Resources/AniDBmini.ico" WindowStartupLocation="Manual"
+        Title="AniDBmini" Height="550" Width="1000" Icon="/AniDBmini;component/Resources/AniDBmini.ico" WindowStartupLocation="Manual"
         MinWidth="850" MinHeight="480" Initialized="OnInitialized" Closing="OnClose" StateChanged="OnStateChanged" IsVisibleChanged="OnIsVisibleChanged" FontFamily="Calibri">
     <Window.Resources>
 
@@ -485,9 +485,9 @@
                 </Grid>
             </TabItem>
             <TabItem Header="Hashing" x:Name="hashinTabItem" Margin="-28,-2,24,-1">
-                <Grid HorizontalAlignment="Center">
+                <Grid Margin="6,0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="345"/>
+                        <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="290"/>
                         <ColumnDefinition Width="175"/>
                     </Grid.ColumnDefinitions>
@@ -498,7 +498,7 @@
                     <ListBox x:Name="hashingListBox" Grid.ColumnSpan="3" Margin="5,5,5,0" Drop="hashingListBox_Drop"
                              AllowDrop="True" SelectionMode="Extended" TextOptions.TextFormattingMode="Display"
                              HorizontalContentAlignment="Stretch"  KeyUp="hashingListBox_KeyUp"
-                             ItemContainerStyle="{StaticResource hashingListBoxItemStyle}">
+                             ItemContainerStyle="{StaticResource hashingListBoxItemStyle}" Width="Auto">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Grid>
