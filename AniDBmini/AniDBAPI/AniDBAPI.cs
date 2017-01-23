@@ -590,6 +590,11 @@ namespace AniDBmini
         private void PrioritizedCommand(Action Command)
         {
             ++mainWindow.m_pendingTasks;
+            mainWindow.Dispatcher.Invoke(new Action(delegate
+            {
+                mainWindow.PendingAPICalls.Content = mainWindow.m_pendingTasks.ToString();
+            }));
+
             ThreadPool.QueueUserWorkItem(new WaitCallback(delegate
             {
                 lock (queueLock)
@@ -602,6 +607,10 @@ namespace AniDBmini
 
                     Command();
                     --mainWindow.m_pendingTasks;
+                    mainWindow.Dispatcher.Invoke(new Action(delegate
+                    {
+                        mainWindow.PendingAPICalls.Content = mainWindow.m_pendingTasks.ToString();
+                    }));
                 }
             }));
         }

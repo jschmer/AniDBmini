@@ -503,6 +503,8 @@
                                 </ItemsControl>
                         </Grid>
                     </GroupBox>
+                    <Label Margin="0,320,0,0" >Pending API calls:</Label>
+                    <Label Name="PendingAPICalls" Margin="100,320,0,0">0</Label>
                     <Button Template="{StaticResource RefreshButtonTemplate}" Click="refreshStatsButton_Click" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="18,10" ToolTip="Refresh" Padding="0"/>
                     <GroupBox Header="Debug" Margin="15,15,15,20" Grid.Column="1">
                         <Grid Margin="0">
