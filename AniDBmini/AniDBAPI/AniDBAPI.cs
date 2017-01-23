@@ -499,6 +499,10 @@ namespace AniDBmini
                         item.Edit = true;
                         MyListAdd(item);
                         return;
+                    case RETURN_CODE.NO_SUCH_MYLIST_ENTRY:
+                        item.Edit = false;
+                        MyListAdd(item);
+                        return;
                     case RETURN_CODE.NO_SUCH_FILE:
                         r_msg = "Error! File not in database";
                         break;
@@ -717,13 +721,22 @@ namespace AniDBmini
 
 #if !MOCK_REMOTE_API
             data = Encoding.UTF8.GetBytes(e_cmd);
-            conn.Send(data, data.Length);
-            data = conn.Receive(ref apiserver);
+
+            RETURN_CODE e_code = RETURN_CODE.ACCESS_DENIED;
+            try
+            {
+                conn.Send(data, data.Length);
+                data = conn.Receive(ref apiserver);
+                e_response = Encoding.UTF8.GetString(data, 0, data.Length);
+                e_code = (RETURN_CODE)int.Parse(e_response.Substring(0, 3));
+            }
+            catch (SocketException e)
+            {
+                AppendDebugLine(String.Format("Failed to execute API command: {0}, Exception: {1}", e_cmd, e.Message));
+            }
 
             queryLog.Add(m_lastCommand);
 
-            e_response = Encoding.UTF8.GetString(data, 0, data.Length);
-            RETURN_CODE e_code = (RETURN_CODE)int.Parse(e_response.Substring(0, 3));
 
 #if DEBUG
             AppendDebugLine(String.Format("Response: {0}", e_response));
