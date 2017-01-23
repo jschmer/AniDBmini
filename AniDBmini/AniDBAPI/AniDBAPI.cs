@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows;
+using System.Diagnostics;
 using System.Windows.Threading;
 
 using AniDBmini.Collections;
@@ -44,7 +45,6 @@ namespace AniDBmini
 
     public class AniDBAPI
     {
-
         #region Enums
 
         private enum RETURN_CODE
@@ -94,7 +94,22 @@ namespace AniDBmini
 
         #endregion Structs
 
-        #region Fields
+        #region Mock Stuff
+#if MOCK_REMOTE_API
+        private static APIResponse CreateResponse(RETURN_CODE code, string DataShort, string DataDetailed = "")
+        {
+            return new APIResponse { Message = String.Format("{0} {1}\n{2}{3}", code.ToString(), DataShort, DataDetailed, (DataDetailed.Length > 0 ? "\n" : "")), Code = code };
+        }
+
+        private Dictionary<string, APIResponse> mocked_api_responses = new Dictionary<string, APIResponse>
+        {
+            { "AUTH", CreateResponse(RETURN_CODE.LOGIN_ACCEPTED, "ABCDE LOGIN ACCEPTED") },
+            { "MYLISTSTATS", CreateResponse(RETURN_CODE.MYLIST_STATS, "MYLIST STATS", "281|6406|6772|1406764|0|0|0|0|100|0|4|4|99|6326|0|0|150395") },
+        };
+#endif
+    #endregion
+
+    #region Fields
 
         private MainWindow mainWindow;
 		private Ed2k hasher = new Ed2k();
@@ -134,24 +149,30 @@ namespace AniDBmini
 
 		public AniDBAPI(string server, int port, int localPort)
         {
-#if !DEBUG
             apiserver = new IPEndPoint(IPAddress.Any, localPort);
 
-        retry:
-            try
+            while (!isConnected)
             {
-                conn.Connect(server, port);
-                isConnected = true;
-            }
-            catch (SocketException)
-            {
-                if ((MessageBox.Show("Unable to connect to api server!\nWould you like to try again?",
-                                "Connection Error!", MessageBoxButton.YesNo, MessageBoxImage.Error)) == MessageBoxResult.Yes)
-                    goto retry;
-            }
-#else
-            isConnected = true;
+                try
+                {
+#if !MOCK_REMOTE_API
+                    conn.Connect(server, port);
 #endif
+                    isConnected = true;
+                }
+                catch (SocketException)
+                {
+                    MessageBoxResult res = MessageBox.Show(
+                        "Unable to connect to api server!\nWould you like to try again?",
+                        "Connection Error!",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Error
+                    );
+
+                    if (res == MessageBoxResult.No)
+                        break;
+                }
+            }
         }
 
         #endregion Constructor
@@ -164,9 +185,8 @@ namespace AniDBmini
 
             if (response.Code == RETURN_CODE.LOGIN_ACCEPTED || response.Code == RETURN_CODE.LOGIN_ACCEPTED_NEW_VERSION)
             {
-#if !DEBUG
                 sessionKey = response.Message.Split(' ')[1];
-#endif
+
                 isLoggedIn = true;
                 this.user = user;
                 this.pass = pass;
@@ -185,9 +205,9 @@ namespace AniDBmini
             Execute("LOGOUT");
         }
 
-        #endregion AUTH
+#endregion AUTH
 
-        #region DATA
+#region DATA
 
         /// <summary>
         /// Anime command to create a anime tab from an anime ID.
@@ -229,9 +249,9 @@ namespace AniDBmini
             PrioritizedCommand(fileInfo);
         }
 
-        #endregion DATA
+#endregion DATA
 
-        #region MYLIST
+#region MYLIST
 
         public void MyListAdd(HashItem item)
         {
@@ -300,9 +320,9 @@ namespace AniDBmini
             PrioritizedCommand(random);
         }
 
-        #endregion MYLIST
+#endregion MYLIST
 
-        #region File Hashing
+#region File Hashing
 
         public HashItem ed2kHash(HashItem item)
         {
@@ -334,9 +354,9 @@ namespace AniDBmini
             hasher.Clear();
         }
 
-		#endregion File Hashing
+#endregion File Hashing
 
-		#region Private Methods
+#region Private Methods
 
         /// <summary>
         /// Executes an action after a certain amount of time has passed
@@ -450,7 +470,7 @@ namespace AniDBmini
         /// <returns>Response from server.</returns>
         private APIResponse Execute(string cmd)
         {
-#if !DEBUG
+#if !MOCK_REMOTE_API
             string e_cmd = cmd;
             string e_response = String.Empty;
 
@@ -486,17 +506,25 @@ namespace AniDBmini
                     return new APIResponse { Message = e_response, Code = e_code };
             }
 #else
-            return new APIResponse { Message = "\n411|7562|7488|1928235|0|0|0|0|0|0|3|6|54|4117|0|0|94407", Code = (RETURN_CODE)200 }; 
+            try
+            {
+                return mocked_api_responses[cmd.Split(' ')[0]];
+            }
+            catch (KeyNotFoundException)
+            {
+                return CreateResponse(RETURN_CODE.ILLEGAL_INPUT_OR_ACCESS_DENIED, "Response not mocked");
+            }
 #endif
         }
 
-        #endregion Private Methods
+#endregion Private Methods
 
-        #region Properties & Static Methods
+#region Properties & Static Methods
 
         public static void AppendDebugLine(string line)
         {
             debugLog.Add(new DebugLine(DateTime.Now.ToLongTimeString(), line.ToString()));
+            Debug.WriteLine(String.Format("{0} {1}", DateTime.Now.ToLongTimeString(), line.ToString()));
         }
 
         public MainWindow MainWindow
@@ -513,7 +541,7 @@ namespace AniDBmini
             remove { hasher.FileHashingProgress -= value; }
         }
 
-        #endregion Properties
+#endregion Properties
 
     }
 }
