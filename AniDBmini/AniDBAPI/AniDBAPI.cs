@@ -236,12 +236,12 @@ namespace AniDBmini
             { "LOGOUT", CreateResponse(RETURN_CODE.LOGGED_OUT, "LOGGED OUT") },
         };
 #endif
-    #endregion
+        #endregion
 
-    #region Fields
+        #region Fields
 
         private MainWindow mainWindow;
-		private Ed2k hasher = new Ed2k();
+        private Ed2k hasher = new Ed2k();
 
 #if !MOCK_REMOTE_API
         private UdpClient conn;
@@ -258,7 +258,7 @@ namespace AniDBmini
 
         private static string LoginAttemptDatetimeFormat = "yyyy/MM/dd HH:mm";
         private static TSObservableCollection<DebugLine> debugLog = new TSObservableCollection<DebugLine>();
-        
+
         public static string[] statsText = { "Anime",
                                              "Episodes",
                                              "Files",
@@ -275,11 +275,11 @@ namespace AniDBmini
         public event FileInfoFetchedHandler OnFileInfoFetched = delegate { };
         public event AnimeTabFetchedHandler OnAnimeTabFetched = delegate { };
 
-		#endregion Fields
+        #endregion Fields
 
-		#region Constructor
+        #region Constructor
 
-		public AniDBAPI(string server, int port, int localPort)
+        public AniDBAPI(string server, int port, int localPort)
         {
             apiserver = new IPEndPoint(IPAddress.Any, localPort);
 
@@ -429,9 +429,9 @@ namespace AniDBmini
             }
         }
 
-#endregion AUTH
+        #endregion AUTH
 
-#region DATA
+        #region DATA
 
         /// <summary>
         /// Anime command to create a anime tab from an anime ID.
@@ -473,9 +473,9 @@ namespace AniDBmini
             PrioritizedCommand(fileInfo);
         }
 
-#endregion DATA
+        #endregion DATA
 
-#region MYLIST
+        #region MYLIST
 
         public void MyListAdd(HashItem item)
         {
@@ -522,7 +522,7 @@ namespace AniDBmini
         public int[] MyListStats()
         {
             string r_msg = Execute("MYLISTSTATS").Message;
-            return Array.ConvertAll<string, int>(Regex.Split(r_msg, "\n")[1].Split('|'), delegate(string s) { return int.Parse(s); });
+            return Array.ConvertAll<string, int>(Regex.Split(r_msg, "\n")[1].Split('|'), delegate (string s) { return int.Parse(s); });
         }
 
         /// <summary>
@@ -544,9 +544,9 @@ namespace AniDBmini
             PrioritizedCommand(random);
         }
 
-#endregion MYLIST
+        #endregion MYLIST
 
-#region File Hashing
+        #region File Hashing
 
         public HashItem ed2kHash(HashItem item)
         {
@@ -578,9 +578,9 @@ namespace AniDBmini
             hasher.Clear();
         }
 
-#endregion File Hashing
+        #endregion File Hashing
 
-#region Private Methods
+        #region Private Methods
 
         /// <summary>
         /// Executes an action after a certain amount of time has passed
@@ -601,7 +601,7 @@ namespace AniDBmini
                         Thread.Sleep(TimeSpan.FromSeconds(timeout - secondsSince));
 
                     Command();
-                    --mainWindow.m_pendingTasks;                    
+                    --mainWindow.m_pendingTasks;
                 }
             }));
         }
@@ -742,7 +742,7 @@ namespace AniDBmini
                     {
                         return new APIResponse { Message = e_response, Code = e_code };
                     }
-                default:                    
+                default:
                     return new APIResponse { Message = e_response, Code = e_code };
             }
 #else
@@ -788,7 +788,7 @@ namespace AniDBmini
             remove { hasher.FileHashingProgress -= value; }
         }
 
-#endregion Properties
+        #endregion Properties
 
     }
 }
