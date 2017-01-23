@@ -28,7 +28,7 @@ namespace AniDBmini
         private MylistDB m_myList;
 
         private string xmlPath;
-        private bool closePending, isBackup, isWorking;
+        private bool closePending, isWorking;
 
         #endregion Fields
 
@@ -91,7 +91,6 @@ namespace AniDBmini
                     try
                     {
                         File.Move(MylistDB.dbPath, MylistDB.dbPath + ".bak");
-                        isBackup = true;
                     }
                     catch (IOException) { }
                 }
