@@ -281,6 +281,8 @@ namespace AniDBmini
 
         public AniDBAPI(string server, int port, int localPort)
         {
+            ThreadPool.SetMaxThreads(1, 1);
+
             apiserver = new IPEndPoint(IPAddress.Any, localPort);
 
             while (!isConnected)
