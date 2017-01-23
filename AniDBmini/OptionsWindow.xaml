@@ -34,7 +34,6 @@
         </Grid.RowDefinitions>
         <TreeView x:Name="OptionsTreeView" Margin="5" SelectedItemChanged="OnSelectedItemChanged">
             <TreeViewItem Header="General" Margin="-15,0,0,0" Tag="0" IsSelected="True" />
-            <TreeViewItem Header="MPC-HC Hooking" Margin="-15,0,0,0" Tag="1" />
         </TreeView>
         <Grid x:Name="OptionGirds" Grid.Column="1"  Margin="5">
             <Grid>
@@ -85,94 +84,6 @@
                 <GroupBox Header="System Tray" Grid.Row="2">
                     <StackPanel>
 
-                    </StackPanel>
-                </GroupBox>
-            </Grid>
-            <Grid Visibility="Collapsed">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="36" />
-                    <RowDefinition Height="160" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <HeaderedContentControl Header="MPC-HC Hooking" Template="{StaticResource HeaderTextBlockTemplate}" />
-                <GroupBox Header="Media Player Classic - Home Cinema" Grid.Row="1">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="80" />                            
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="22" />
-                            <RowDefinition Height="32" />
-                            <RowDefinition Height="24" />
-                            <RowDefinition Height="22" />
-                            <RowDefinition Height="24" />
-                            <RowDefinition Height="20" />
-                        </Grid.RowDefinitions>
-                        <Label Content="Location:" Margin="5,0" VerticalAlignment="Bottom" />
-                        <TextBox x:Name="mpchcLocationTextBox" Grid.Row="1" Margin="5,0" Height="24" TextChanged="enableApplyButton" />
-                        <Button Grid.Column="1" Grid.Row="1" Content="Browse" Margin="5,0" Height="24" Click="MPCBrowseOnClick" BorderThickness="1" />
-                        <StackPanel Grid.ColumnSpan="2" Grid.Row="2" Orientation="Horizontal">
-                            <Label Content="Mark watched:"  Margin="5,0" VerticalAlignment="Center" />
-                            <RadioButton x:Name="mpcMarkDuring" Content="During playback" Margin="5" VerticalAlignment="Center" Click="enableApplyButton" />
-                            <RadioButton x:Name="mpcMarkAfter" Content="After playback" Margin="5" VerticalAlignment="Center" Click="enableApplyButton" />
-                        </StackPanel>
-                        <Label Content="Watched threshold:" Grid.ColumnSpan="2" Grid.Row="3" Margin="5,0" VerticalAlignment="Bottom">
-                            <Label.ToolTip>
-                                <TextBlock>
-                                    The percent of the file in which you need to watch for the file to be counted as watched.<LineBreak/>
-                                    Note: Does not include time skipped.
-                                </TextBlock>
-                            </Label.ToolTip>
-                        </Label>
-                        <Slider x:Name="mpcWatchedPercSlider" Grid.ColumnSpan="2" Grid.Row="4" Margin="10,0" Value="50" Maximum="100" Minimum="1" SmallChange="1" LargeChange="10" ValueChanged="enableApplyButton">
-                            <Slider.ToolTip>
-                                <TextBlock>
-                                    The percent of the file in which you need to watch for the file to be counted as watched.<LineBreak/>
-                                    Note: Does not include time skipped.
-                                </TextBlock>
-                            </Slider.ToolTip>
-                        </Slider>
-                        <TextBlock Grid.ColumnSpan="2" Grid.Row="5" Margin="5,0" HorizontalAlignment="Center">
-                            <TextBlock x:Name="mpcWatchedPerc" Text="{Binding ElementName=mpcWatchedPercSlider, Path=Value, Converter={StaticResource WholeNumberConverter}}" />%
-                        </TextBlock>
-                    </Grid>
-                </GroupBox>
-                <GroupBox Header="Misc. Settings" Grid.Row="2">
-                    <StackPanel>
-                        <Grid Margin="5,5,5,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="158" />
-                                <ColumnDefinition Width="158" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <CheckBox x:Name="mpcShowFileInTitle" Content="Show file in title" Margin="5,2,0,0"
-                                          VerticalAlignment="Center" Click="enableApplyButton" BorderThickness="1" />
-                                <CheckBox x:Name="mpcShowWatchedOSD" Content="Show OSD message" Margin="5,2,0,0" BorderThickness="1"
-                                          VerticalAlignment="Center" Click="enableApplyButton" ToolTip="Show a message inside MPC-HC when a file is marked as watched." />
-                            </StackPanel>
-                            <StackPanel Grid.Column="1">
-                                <CheckBox x:Name="mpcClose" Content="Close MPC-HC on exit" Margin="5,2,0,0"
-                                          VerticalAlignment="Center" Click="enableApplyButton" BorderThickness="1" />
-                            </StackPanel>
-                        </Grid>
-                        <StackPanel Margin="5,5,5,0" Orientation="Horizontal">
-                            <Label Content="OSD message position:" Margin="5,0" Width="125" />
-                            <ComboBox x:Name="mpcOSDPos" Height="24" Margin="5,0" SelectionChanged="enableApplyButton" SelectedIndex="0" ToolTip="MadVR OSD posistion will always be top left.">
-                                <ComboBoxItem>Top Left</ComboBoxItem>
-                                <ComboBoxItem>Top Right</ComboBoxItem>
-                            </ComboBox>
-                        </StackPanel>
-                        <StackPanel Margin="5,5,5,0" Orientation="Horizontal">
-                            <Label Content="OSD message duration:" Margin="5,0" Width="125" />
-                            <ComboBox x:Name="mpcOSDDurMS" Height="24" Margin="5,0" SelectionChanged="enableApplyButton" SelectedIndex="1">
-                                <ComboBoxItem>1 Second</ComboBoxItem>
-                                <ComboBoxItem>2 Seconds</ComboBoxItem>
-                                <ComboBoxItem>3 Seconds</ComboBoxItem>
-                                <ComboBoxItem>4 Seconds</ComboBoxItem>
-                                <ComboBoxItem>5 Seconds</ComboBoxItem>
-                            </ComboBox>
-                        </StackPanel>
                     </StackPanel>
                 </GroupBox>
             </Grid>

@@ -215,8 +215,6 @@
     <Compile Include="AniDBmini\Collections\TSObservableCollection.cs" />
     <Compile Include="AniDBAPI\HashAlgorithms\Ed2k.cs" />
     <Compile Include="AniDBAPI\HashAlgorithms\Md4.cs" />
-    <Compile Include="MPCAPI\MPCAPI.cs" />
-    <Compile Include="MPCAPI\FileWatchedEvent.cs" />
     <Compile Include="AniDBmini\Mylist\ImportWindow.xaml.cs">
       <DependentUpon>ImportWindow.xaml</DependentUpon>
     </Compile>
@@ -239,7 +237,6 @@
   <ItemGroup>
     <Compile Include="AniDBmini\Collections\Mylist\AnimeEntry.cs" />
     <Compile Include="AniDBmini\Mylist\MylistDB.cs" />
-    <Compile Include="MPCAPI\MPCProcWatcher.cs" />
     <Compile Include="OptionsWindow.xaml.cs">
       <DependentUpon>OptionsWindow.xaml</DependentUpon>
     </Compile>

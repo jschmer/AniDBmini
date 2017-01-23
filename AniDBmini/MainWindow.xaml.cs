@@ -62,8 +62,6 @@ namespace AniDBmini
         private BackgroundWorker m_HashWorker;
 
         private AniDBAPI m_aniDBAPI;
-        private MPCAPI m_mpcAPI;
-        private MPCProcWatcher m_mpcProcWatcher;
         private MylistDB m_myList;
 
         private DateTime m_hashingStartTime;
@@ -91,10 +89,6 @@ namespace AniDBmini
             InitializeComponent();
 
             SetMylistVisibility();
-
-            m_mpcProcWatcher = new MPCProcWatcher();
-            m_mpcProcWatcher.OnMPCStarted += new MPCStartedHandler(OnMPCStarted);
-            m_mpcProcWatcher.StartUp();
 
             mylistStats.ItemsSource = mylistStatsList;
             debugListBox.ItemsSource = m_aniDBAPI.DebugLog;
@@ -170,11 +164,6 @@ namespace AniDBmini
             cm_open.Click += (s, e) => { this.Show(); WindowState = m_storedWindowState; };
             m_notifyContextMenu.MenuItems.Add(cm_open);
 
-            Forms.MenuItem cm_MPCHCopen = new Forms.MenuItem();
-            cm_MPCHCopen.Text = "Open MPC-HC";
-            cm_MPCHCopen.Click += (s, e) => { mpchcLaunch(this, null); };
-            m_notifyContextMenu.MenuItems.Add(cm_MPCHCopen);
-
             m_notifyContextMenu.MenuItems.Add("-");
 
             Forms.MenuItem cm_exit = new Forms.MenuItem();
@@ -186,62 +175,6 @@ namespace AniDBmini
         #endregion
 
         #region Private Methods
-
-        #region MPCHC
-
-        private bool SetMPCHCLocation()
-        {
-            string pFilesPath = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            Microsoft.Win32.OpenFileDialog dlg = new Microsoft.Win32.OpenFileDialog();
-            dlg.Filter = "MPC-HC main executable|mpc-hc.exe;mpc-hc64.exe";
-            dlg.InitialDirectory = (System.IO.Directory.Exists(pFilesPath + @"\Media Player Classic - Home Cinema") ?
-                                   pFilesPath + @"\Media Player Classic - Home Cinema" : pFilesPath);
-
-            Nullable<bool> result = dlg.ShowDialog();
-
-            if (result == true)
-            {
-                if (System.IO.Path.GetFileNameWithoutExtension(dlg.FileName) == "mpc-hc64" && IntPtr.Size == 4)
-                    MessageBox.Show("Media Player Classic - Home Cinema 64bit will not work\nwith the 32bit version of " + MainWindow.m_AppName + ".\n\n" +
-                                    "Please use the 64bit version of " + MainWindow.m_AppName + ".\nOr use the 32bit version of Media Player Classic - Home Cinema.",
-                                    "Alert!", MessageBoxButton.OK, MessageBoxImage.Exclamation);
-                else
-                {
-                    ConfigFile.Write("mpcPath", dlg.FileName);
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Adds a list of files to mpc-hc's playlist.
-        /// Optionally clears the current playlist, and starts playback.
-        /// </summary>
-        private void AddToPlaylist(List<string> fPaths, bool clearPlay)
-        {
-            if (fPaths.Count > 0)
-            {
-                mpchcLaunch(this, null);
-
-                ThreadPool.QueueUserWorkItem(new WaitCallback(delegate
-                {
-                    while (!m_mpcAPI.isHooked) Thread.Sleep(200);
-
-                    if (clearPlay)
-                        m_mpcAPI.ClearPlaylist();
-
-                    foreach (string path in fPaths)
-                        m_mpcAPI.AddFileToPlaylist(path);
-
-                    if (clearPlay)
-                        m_mpcAPI.StartPlaylist();
-                }));
-            }
-        }
-
-        #endregion MPCHC
 
         #region Hashing
 
@@ -329,20 +262,16 @@ namespace AniDBmini
         {
             ppSize += item.Size;
 
-            if (item.FromMPC)
-            {
-                m_aniDBAPI.MyListAdd(item);
-
-                if (ConfigFile.Read("mpcShowOSD").ToBoolean() && m_mpcAPI != null && m_mpcAPI.isHooked)
-                    m_mpcAPI.OSDShowMessage(String.Format("{0}: File marked as watched{1}", m_AppName,
-                        m_mpcAPI.CurrentFileName != item.Name ? String.Format(", ({0})", item.Name) : String.Empty));
-            }
-            else if (addToMyListCheckBox.IsChecked == true)
+            if (addToMyListCheckBox.IsChecked == true)
             {
                 item.Watched = (bool)watchedCheckBox.IsChecked;
                 item.State = stateComboBox.SelectedIndex;
 
                 m_aniDBAPI.MyListAdd(item);
+            }
+            else
+            {
+                m_aniDBAPI.File(item);
             }
         }
 
@@ -406,7 +335,7 @@ namespace AniDBmini
                 else if (MessageBox.Show("Would you like to locate the file?", "File not found!",
                     MessageBoxButton.YesNo, MessageBoxImage.Exclamation) == MessageBoxResult.Yes &&
                     SetFileLocation(fEntry))
-                    AddToMPCHC_Click(sender, null);
+                { }
             }
 
             return fPaths;
@@ -437,68 +366,7 @@ namespace AniDBmini
             OptionsWindow options = new OptionsWindow();
             options.Owner = this;
 
-            if (options.ShowDialog() == true)
-            {
-                if (m_mpcAPI != null)
-                    m_mpcAPI.LoadConfig();
-            }
-        }
-
-        /// <summary>
-        /// Launches or focuses MPC-HC.
-        /// </summary>
-        private void mpchcLaunch(object sender, RoutedEventArgs e)
-        {
-            if (m_mpcAPI == null || !m_mpcAPI.isHooked || !m_mpcAPI.FocusMPC())
-            {
-                if (File.Exists(ConfigFile.Read("mpcPath").ToString()))
-                {
-                    m_mpcAPI = new MPCAPI(this);
-                    m_mpcAPI.OnFileWatched += new FileWatchedHandler(OnFileWatched);
-                }
-                else if (MessageBox.Show("Please ensure you have located the mpc-hc executable inside the options.\nWould you like to set mpc-hc's location now?",
-                                         "Media Player Classic - Home Cinema not found!", MessageBoxButton.YesNo, MessageBoxImage.Error) == MessageBoxResult.Yes &&
-                        SetMPCHCLocation())
-                    mpchcLaunch(sender, e);
-            }
-        }
-
-        private void OnMPCStarted(System.Management.ManagementObject obj)
-        {
-            string args = null;
-
-            if (m_mpcAPI == null || !m_mpcAPI.isHooked || (UInt32)obj["ProcessID"] != m_mpcAPI.ProcessID)
-            {
-                args = obj["CommandLine"].ToString();
-                obj.InvokeMethod("Terminate", null);
-
-                Dispatcher.BeginInvoke(new Action(delegate
-                {
-                    if (m_mpcAPI == null || !m_mpcAPI.isHooked)
-                        mpchcLaunch(null, null);
-
-                    if (args != null)
-                    {
-                        string[] argsArray   = args.Split('"').Where(x => !String.IsNullOrWhiteSpace(x)).ToArray<string>();
-
-                        foreach (string arg in argsArray)
-                        {
-                            if (File.Exists(arg) && allowedVideoFiles.Contains(String.Format("*{0}", Path.GetExtension(arg).ToLower())))
-                                m_mpcAPI.AddFileToPlaylist(arg);
-                        }
-                    }
-                }));
-            }
-        }
-
-        private void OnFileWatched(object sender, FileWatchedArgs e)
-        {
-            HashItem item = e.Item;
-            item.State = 1;
-            item.Watched = item.FromMPC = true;
-
-            lock (m_hashingLock)
-                addRowToHashTable(item);
+            options.ShowDialog();
         }
 
         private void randomAnimeButton_Click(object sender, RoutedEventArgs e)
@@ -558,9 +426,6 @@ namespace AniDBmini
 
         private void OnClose(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (ConfigFile.Read("mpcClose").ToBoolean() && m_mpcAPI != null && m_mpcAPI.isHooked)
-                m_mpcAPI.CloseMPC();
-
             m_myList.Close();
             m_aniDBAPI.Logout();
 
@@ -816,11 +681,6 @@ namespace AniDBmini
             m_aniDBAPI.Anime(int.Parse((sender as MenuItem).Tag.ToString()));
         }
 
-        private void AddToMPCHC_Click(object sender, RoutedEventArgs e)
-        {
-            AddToPlaylist(GetFilePathList(sender), false);
-        }
-
         private void FetchEntryInfo_Click(object sender, RoutedEventArgs e)
         {
             object entry = (sender as MenuItem).Tag;
@@ -885,31 +745,6 @@ namespace AniDBmini
             }
             else if (entry is FileEntry)
                 SetFileLocation(entry as FileEntry);
-        }
-
-        private void PlayWithMPCHC_Click(object sender, RoutedEventArgs e)
-        {
-            object entry = (sender as MenuItem).Tag;
-
-            if (entry is AnimeEntry)
-                AddToPlaylist(GetFilePathList(sender), true);
-            else if (entry is FileEntry)
-            {
-                FileEntry fEntry = entry as FileEntry;
-                if (fEntry.path != null ||
-                    (MessageBox.Show("Would you like to locate the file?", "File not found!",
-                    MessageBoxButton.YesNo, MessageBoxImage.Exclamation) == MessageBoxResult.Yes &&
-                    SetFileLocation(fEntry)))
-                {
-                    mpchcLaunch(this, null);
-
-                    ThreadPool.QueueUserWorkItem(new WaitCallback(delegate
-                    {
-                        while (!m_mpcAPI.isHooked) Thread.Sleep(200);
-                        m_mpcAPI.OpenFile(fEntry.path);
-                    }));
-                }
-            }
         }
 
         // TODO
