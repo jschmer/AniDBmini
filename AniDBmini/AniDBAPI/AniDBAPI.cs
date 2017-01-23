@@ -49,6 +49,7 @@ namespace AniDBmini
 
         private enum RETURN_CODE
         {
+            LOGIN_IGNORED_RETRY_LATER                = 1,    // Used to distinguish between failed login and banned connection
             LOGIN_ACCEPTED                           = 200,
             LOGIN_ACCEPTED_NEW_VERSION               = 201,
             LOGGED_OUT                               = 203,
@@ -240,7 +241,9 @@ namespace AniDBmini
         private MainWindow mainWindow;
 		private Ed2k hasher = new Ed2k();
 
+#if !MOCK_REMOTE_API
         private UdpClient conn;
+#endif
         private IPEndPoint apiserver = new IPEndPoint(IPAddress.None, 0);
         private DateTime m_lastCommand;
 
@@ -251,6 +254,7 @@ namespace AniDBmini
         private bool isLoggedIn;
         private string sessionKey, user, pass;
 
+        private static string LoginAttemptDatetimeFormat = "yyyy/MM/dd HH:mm";
         private static TSObservableCollection<DebugLine> debugLog = new TSObservableCollection<DebugLine>();
         
         public static string[] statsText = { "Anime",
@@ -308,10 +312,33 @@ namespace AniDBmini
         #endregion Constructor
 
         #region AUTH
+        private static bool LoginAllowed(out string nextAllowedAttemptStr)
+        {
+            nextAllowedAttemptStr = ConfigFile.Read("NextAllowedLoginAttempt", DateTime.Now.ToString(LoginAttemptDatetimeFormat)).ToString();
+            DateTime nextAllowedLoginAttempt;
+            try
+            {
+                nextAllowedLoginAttempt = DateTime.Parse(nextAllowedAttemptStr);
+            }
+            catch (FormatException)
+            {
+                nextAllowedLoginAttempt = DateTime.Now;
+                nextAllowedAttemptStr = nextAllowedLoginAttempt.ToString(LoginAttemptDatetimeFormat);
+            }
+
+            return nextAllowedLoginAttempt <= DateTime.Now;
+        }
 
         public bool Login(string user, string pass)
         {
-            APIResponse response = Execute("AUTH user=" + user + "&pass=" + pass + "&protover=3&client=anidbmini&clientver=1&enc=UTF8");
+            string nextAllowedAttemptString;
+            if (!LoginAllowed(out nextAllowedAttemptString))
+            {
+                MessageBox.Show("Login not allowed!\nNext allowed login at " + nextAllowedAttemptString, "Login Failed!", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+
+            APIResponse response = Execute("AUTH user=" + user + "&pass=" + pass + "&protover=3&client=anidbmini&clientver=1&enc=UTF8", false);
 
             if (response.Code == RETURN_CODE.LOGIN_ACCEPTED || response.Code == RETURN_CODE.LOGIN_ACCEPTED_NEW_VERSION)
             {
@@ -320,6 +347,29 @@ namespace AniDBmini
                 isLoggedIn = true;
                 this.user = user;
                 this.pass = pass;
+
+                AppendDebugLine(String.Format("Logged in with session key '{0}'", sessionKey));
+
+                ConfigFile.Write("FailedLoginAttempts", "0");
+                ConfigFile.Write("sessionKey", sessionKey);
+                ConfigFile.Write("NextAllowedLoginAttempt", DateTime.Now.ToString(LoginAttemptDatetimeFormat));
+            }
+            else if (response.Code == RETURN_CODE.LOGIN_IGNORED_RETRY_LATER)
+            {
+                int currentFailedLoginAttempts = ConfigFile.Read("FailedLoginAttempts", "0").ToInt32() + 1;
+                ConfigFile.Write("FailedLoginAttempts", currentFailedLoginAttempts.ToString());
+
+                // calculate next login attempt
+                int baseLoginDelay = Math.Max(1, ConfigFile.Read("BaseLoginDelayMinutes", "5").ToInt32());
+                int loginDelayMinutes = Math.Min(4 * 60, (int)Math.Pow(baseLoginDelay, currentFailedLoginAttempts));
+
+                DateTime nextLoginAttempt = DateTime.Now.AddMinutes(loginDelayMinutes);
+                string nextLoginAttemptStr = nextLoginAttempt.ToString(LoginAttemptDatetimeFormat);
+                ConfigFile.Write("NextAllowedLoginAttempt", nextLoginAttemptStr);
+
+                // tell user
+                MessageBox.Show(response.Message + "\nNext allowed login at " + nextLoginAttemptStr, "Login Failed!", MessageBoxButton.OK, MessageBoxImage.Error);
+                isLoggedIn = false;
             }
             else
             {
@@ -598,17 +648,21 @@ namespace AniDBmini
         /// And returns a response.
         /// </summary>
         /// <returns>Response from server.</returns>
-        private APIResponse Execute(string cmd)
+        private APIResponse Execute(string cmd, bool retryWithLogin = true)
         {
             m_lastCommand = DateTime.Now;
 
-#if !MOCK_REMOTE_API
             string e_cmd = cmd;
             string e_response = String.Empty;
 
             if (isLoggedIn)
                 e_cmd += (e_cmd.Contains("=") ? "&" : " ") + "s=" + sessionKey;
 
+#if DEBUG
+            AppendDebugLine(String.Format("Command: {0}", e_cmd));
+#endif
+
+#if !MOCK_REMOTE_API
             data = Encoding.UTF8.GetBytes(e_cmd);
             conn.Send(data, data.Length);
             data = conn.Receive(ref apiserver);
@@ -618,39 +672,57 @@ namespace AniDBmini
             e_response = Encoding.UTF8.GetString(data, 0, data.Length);
             RETURN_CODE e_code = (RETURN_CODE)int.Parse(e_response.Substring(0, 3));
 
+#if DEBUG
+            AppendDebugLine(String.Format("Response: {0}", e_response));
+#endif
+
             switch (e_code)
             {
                 case RETURN_CODE.LOGIN_FIRST:
                 case RETURN_CODE.ACCESS_DENIED:
                 case RETURN_CODE.INVALID_SESSION:
                     isLoggedIn = false;
-                    if (Login(user, pass))
-                        return Execute(cmd);
+                    if (retryWithLogin)
+                    {
+                        if (Login(user, pass))
+                            return Execute(cmd);
+                        else
+                        {
+                            var login = new LoginWindow();
+                            login.Show();
+                            mainWindow.Close();
+                            return new APIResponse();
+                        }
+                    }
                     else
                     {
-                        var login = new LoginWindow();
-                        login.Show();
-                        mainWindow.Close();
-                        return new APIResponse();
+                        return new APIResponse { Message = e_response, Code = e_code };
                     }
                 default:                    
                     return new APIResponse { Message = e_response, Code = e_code };
             }
 #else
+            APIResponse response;
             try
             {
-                return mocked_api_responses[cmd.Split(' ')[0]];
+                response = mocked_api_responses[cmd.Split(' ')[0]];
             }
             catch (KeyNotFoundException)
             {
-                return CreateResponse(RETURN_CODE.ILLEGAL_INPUT_OR_ACCESS_DENIED, "Response not mocked");
+                response = CreateResponse(RETURN_CODE.ILLEGAL_INPUT_OR_ACCESS_DENIED, "Response not mocked");
             }
+
+#if DEBUG
+            AppendDebugLine(String.Format("Response: {0}", response.Message));
+#endif
+
+            return response;
 #endif
         }
 
-#endregion Private Methods
+        #endregion Private Methods
 
-#region Properties & Static Methods
+        #region Properties & Static Methods
 
         public static void AppendDebugLine(string line)
         {

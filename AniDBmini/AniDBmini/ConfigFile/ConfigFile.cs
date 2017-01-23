@@ -107,6 +107,21 @@ namespace AniDBmini
         }
 
         /// <summary>
+        /// Read data value from the ini file, return default if key does not exist
+        /// </summary>
+        public static ConfigValue Read(string Key, string defaultValue)
+        {
+            try
+            {
+                return Read(Key);
+            }
+            catch (KeyNotFoundException)
+            {
+                return new ConfigValue(defaultValue);
+            }
+        }
+
+        /// <summary>
         /// Write data to the ini file
         /// </summary>
         public static void Write(string Key, string Value)
