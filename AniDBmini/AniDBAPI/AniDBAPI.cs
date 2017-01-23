@@ -232,6 +232,8 @@ namespace AniDBmini
         {
             { "AUTH", CreateResponse(RETURN_CODE.LOGIN_ACCEPTED, "ABCDE LOGIN ACCEPTED") },
             { "MYLISTSTATS", CreateResponse(RETURN_CODE.MYLIST_STATS, "MYLIST STATS", "281|6406|6772|1406764|0|0|0|0|100|0|4|4|99|6326|0|0|150395") },
+            { "UPTIME", CreateResponse(RETURN_CODE.UPTIME, "UPTIME", "1503955") },
+            { "LOGOUT", CreateResponse(RETURN_CODE.LOGGED_OUT, "LOGGED OUT") },
         };
 #endif
     #endregion
@@ -338,6 +340,30 @@ namespace AniDBmini
                 return false;
             }
 
+            try
+            {
+                sessionKey = ConfigFile.Read("sessionKey").ToString();
+                isLoggedIn = true;
+
+                AppendDebugLine(String.Format("Trying to reuse session with key '{0}'", sessionKey));
+
+                APIResponse uptimeResponse = Execute("UPTIME", false);
+                if (uptimeResponse.Code == RETURN_CODE.UPTIME)
+                {
+                    AppendDebugLine(String.Format("Successfully reused session key '{0}'", sessionKey));
+                    return true;
+                }
+                else
+                {
+                    AppendDebugLine(String.Format("Session with key '{0}' expired, trying normal login", sessionKey));
+                    isLoggedIn = false;
+                }
+            }
+            catch (KeyNotFoundException)
+            {
+                // ignore
+            }
+
             APIResponse response = Execute("AUTH user=" + user + "&pass=" + pass + "&protover=3&client=anidbmini&clientver=1&enc=UTF8", false);
 
             if (response.Code == RETURN_CODE.LOGIN_ACCEPTED || response.Code == RETURN_CODE.LOGIN_ACCEPTED_NEW_VERSION)
@@ -382,7 +408,25 @@ namespace AniDBmini
 
         public void Logout()
         {
-            Execute("LOGOUT");
+            MessageBoxResult result = MessageBox.Show("Will you come back within 30 minutes?", "Long time close?", MessageBoxButton.YesNo);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                // Only save session key to be reused on next startup
+                ConfigFile.Write("sessionKey", sessionKey);
+            }
+            else
+            {
+                APIResponse response = Execute("LOGOUT");
+                if (response.Code == RETURN_CODE.LOGGED_OUT)
+                {
+                    MessageBox.Show("Logged out from anidb!\nDon't try to log in too often or you'll be banned for some time.", "Logged out", MessageBoxButton.OK);
+                }
+                else
+                {
+                    MessageBox.Show(String.Format("Failed to log out from anidb!\n{0}", response.Message), "Failure", MessageBoxButton.OK);
+                }
+            }
         }
 
 #endregion AUTH
