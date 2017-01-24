@@ -257,7 +257,8 @@ namespace AniDBmini
         private string sessionKey, user, pass;
 
         private static string LoginAttemptDatetimeFormat = "yyyy/MM/dd HH:mm";
-        private static TSObservableCollection<DebugLine> debugLog = new TSObservableCollection<DebugLine>();
+        private static TSObservableCollection<DebugLine> apiDebugLog = new TSObservableCollection<DebugLine>();
+        private static TSObservableCollection<DebugLine> hashDebugLog = new TSObservableCollection<DebugLine>();
 
         public static string[] statsText = { "Anime",
                                              "Episodes",
@@ -347,17 +348,17 @@ namespace AniDBmini
                 sessionKey = ConfigFile.Read("sessionKey").ToString();
                 isLoggedIn = true;
 
-                AppendDebugLine(String.Format("Trying to reuse session with key '{0}'", sessionKey));
+                AppendApiDebugLine(String.Format("Trying to reuse session with key '{0}'", sessionKey));
 
                 APIResponse uptimeResponse = Execute("UPTIME", false);
                 if (uptimeResponse.Code == RETURN_CODE.UPTIME)
                 {
-                    AppendDebugLine(String.Format("Successfully reused session key '{0}'", sessionKey));
+                    AppendApiDebugLine(String.Format("Successfully reused session key '{0}'", sessionKey));
                     return true;
                 }
                 else
                 {
-                    AppendDebugLine(String.Format("Session with key '{0}' expired, trying normal login", sessionKey));
+                    AppendApiDebugLine(String.Format("Session with key '{0}' expired, trying normal login", sessionKey));
                     isLoggedIn = false;
                 }
             }
@@ -376,7 +377,7 @@ namespace AniDBmini
                 this.user = user;
                 this.pass = pass;
 
-                AppendDebugLine(String.Format("Logged in with session key '{0}'", sessionKey));
+                AppendApiDebugLine(String.Format("Logged in with session key '{0}'", sessionKey));
 
                 ConfigFile.Write("FailedLoginAttempts", "0");
                 ConfigFile.Write("sessionKey", sessionKey);
@@ -483,6 +484,10 @@ namespace AniDBmini
         {
             Action addToList = new Action(delegate
             {
+#if DEBUG
+                AppendApiDebugLine(String.Format("Add to mylist: {0} Size={1} ED2K={2}", item.Path, item.Size, item.Hash));
+#endif
+
                 string r_msg = String.Empty;
                 APIResponse response = Execute(String.Format("MYLISTADD size={0}&ed2k={1}&viewed={2}&state={3}&edit={4}",
                     item.Size, item.Hash, Convert.ToInt32(item.Watched), item.State, Convert.ToInt32(item.Edit)));
@@ -510,7 +515,7 @@ namespace AniDBmini
                         break;
                 }
 
-                AppendDebugLine(r_msg);
+                AppendApiDebugLine(r_msg);
             });
 
             PrioritizedCommand(addToList);
@@ -561,18 +566,18 @@ namespace AniDBmini
 
             using (FileStream fs = file.OpenRead())
             {
-                AppendDebugLine("Hashing " + item.Name);
+                AppendHashDebugLine("Hashing " + item.Name);
                 byte[] temp;
 
                 if ((temp = hasher.ComputeHash(fs)) != null)
                 {
                     item.Hash = string.Concat(temp.Select(b => b.ToString("x2")).ToArray());
-                    AppendDebugLine("Ed2k hash: " + item.Hash);
+                    AppendHashDebugLine("Ed2k hash: " + item.Hash);
 
                     return item;
                 }
                 else
-                    AppendDebugLine("Hashing aborted");
+                    AppendHashDebugLine("Hashing aborted");
 
                 return null;
             }
@@ -718,7 +723,7 @@ namespace AniDBmini
                 e_cmd += (e_cmd.Contains("=") ? "&" : " ") + "s=" + sessionKey;
 
 #if DEBUG
-            AppendDebugLine(String.Format("Command: {0}", e_cmd));
+            AppendApiDebugLine(String.Format("Command: {0}", e_cmd));
 #endif
 
 #if !MOCK_REMOTE_API
@@ -734,14 +739,14 @@ namespace AniDBmini
             }
             catch (SocketException e)
             {
-                AppendDebugLine(String.Format("Failed to execute API command: {0}, Exception: {1}", e_cmd, e.Message));
+                AppendApiDebugLine(String.Format("Failed to execute API command: {0}, Exception: {1}", e_cmd, e.Message));
             }
 
             queryLog.Add(m_lastCommand);
 
 
 #if DEBUG
-            AppendDebugLine(String.Format("Response: {0}", e_response));
+            AppendApiDebugLine(String.Format("Response: {0}", e_response));
 #endif
 
             switch (e_code)
@@ -792,10 +797,16 @@ namespace AniDBmini
 
         #region Properties & Static Methods
 
-        public static void AppendDebugLine(string line)
+        public static void AppendApiDebugLine(string line)
         {
-            debugLog.Add(new DebugLine(DateTime.Now.ToLongTimeString(), line.ToString()));
-            Debug.WriteLine(String.Format("{0} {1}", DateTime.Now.ToLongTimeString(), line.ToString()));
+            apiDebugLog.Add(new DebugLine(DateTime.Now.ToLongTimeString(), line.ToString()));
+            Debug.WriteLine(String.Format("[{0}] {1} {2}", Thread.CurrentThread.ManagedThreadId, DateTime.Now.ToLongTimeString(), line.ToString()));
+        }
+
+        public static void AppendHashDebugLine(string line)
+        {
+            hashDebugLog.Add(new DebugLine(DateTime.Now.ToLongTimeString(), line.ToString()));
+            Debug.WriteLine(String.Format("[{0}] {1} {2}", Thread.CurrentThread.ManagedThreadId, DateTime.Now.ToLongTimeString(), line.ToString()));
         }
 
         public MainWindow MainWindow
@@ -804,7 +815,8 @@ namespace AniDBmini
         }
 
         public IPEndPoint APIServer { get { return apiserver; } }
-        public TSObservableCollection<DebugLine> DebugLog { get { return debugLog; } }
+        public TSObservableCollection<DebugLine> ApiDebugLog { get { return apiDebugLog; } }
+        public TSObservableCollection<DebugLine> HashDebugLog { get { return hashDebugLog; } }
 
         public event FileHashingProgressHandler OnFileHashingProgress
         {

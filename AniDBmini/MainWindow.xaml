@@ -436,7 +436,7 @@
                         <ColumnDefinition Width="300"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <GroupBox Header="MyList Stats" Height="275" Margin="15,15,15,20" VerticalAlignment="Top">
+                    <GroupBox Header="MyList Stats" Height="275" Margin="10,10,20,0" VerticalAlignment="Top">
                         <Grid Margin="0">
                             <ItemsControl x:Name="mylistStats" Background="Transparent" BorderThickness="0" Focusable="False" Margin="0">
                                 <ItemsControl.ItemTemplate>
@@ -454,18 +454,43 @@
                             </ItemsControl>
                         </Grid>
                     </GroupBox>
-                    <Label Margin="0,320,0,0" >Pending API calls:</Label>
-                    <Label Name="PendingAPICalls" Margin="100,320,0,0">0</Label>
-                    <Button Template="{StaticResource RefreshButtonTemplate}" Click="refreshStatsButton_Click" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="18,10" ToolTip="Refresh" Padding="0"/>
-                    <GroupBox Header="Debug" Margin="15,15,15,20" Grid.Column="1">
+                    <Label Margin="10,294,177,10" >Pending API calls:</Label>
+                    <Label Name="PendingAPICalls" Margin="128,294,10,10">0</Label>
+                    <Button Template="{StaticResource RefreshButtonTemplate}" Click="refreshStatsButton_Click" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,13,196,0" ToolTip="Refresh" Padding="0"/>
+                    <GroupBox Header="Hash Debug" Grid.Column="1" VerticalAlignment="Top" MinHeight="170" MaxHeight="170" Margin="0,0,10,0">
                         <Grid Margin="0">
                             <Grid.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Header="Clear log" Click="clearDebugLog"/>
+                                    <MenuItem Header="Clear log" Click="clearHashDebugLog"/>
                                 </ContextMenu>
                             </Grid.ContextMenu>
-                            <ScrollViewer x:Name="debugListBoxScrollViewer" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto">
-                                <ItemsControl x:Name="debugListBox" Background="Transparent" BorderThickness="0" Focusable="False" Margin="0" SizeChanged="debugListBox_SizeChanged">
+                            <ScrollViewer x:Name="hashDebugListBoxScrollViewer" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                                <ItemsControl x:Name="hashDebugListBox" Background="Transparent" BorderThickness="0" Focusable="False" Margin="0" SizeChanged="hashDebugListBox_SizeChanged" Height="Auto" Width="Auto">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="50"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding Time}" Padding="3"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding Message}" Padding="3"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </GroupBox>
+                    <GroupBox Header="RemoteAPI Debug" Margin="0,175,10,10" Grid.Column="1">
+                        <Grid Margin="0">
+                            <Grid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Clear log" Click="clearApiDebugLog"/>
+                                </ContextMenu>
+                            </Grid.ContextMenu>
+                            <ScrollViewer x:Name="apiDebugListBoxScrollViewer" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                                <ItemsControl x:Name="apiDebugListBox" Background="Transparent" BorderThickness="0" Focusable="False" Margin="0" SizeChanged="apiDebugListBox_SizeChanged">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
                                             <Grid>

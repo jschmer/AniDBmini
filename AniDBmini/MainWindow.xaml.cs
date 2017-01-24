@@ -84,14 +84,15 @@ namespace AniDBmini
         public MainWindow(AniDBAPI api)
         {
             m_aniDBAPI = api;
-            AniDBAPI.AppendDebugLine("Welcome to AniDBmini, connected to: " + m_aniDBAPI.APIServer);
+            AniDBAPI.AppendApiDebugLine("Welcome to AniDBmini, connected to: " + m_aniDBAPI.APIServer);
 
             InitializeComponent();
 
             SetMylistVisibility();
 
             mylistStats.ItemsSource = mylistStatsList;
-            debugListBox.ItemsSource = m_aniDBAPI.DebugLog;
+            apiDebugListBox.ItemsSource = m_aniDBAPI.ApiDebugLog;
+            hashDebugListBox.ItemsSource = m_aniDBAPI.HashDebugLog;
             hashingListBox.ItemsSource = hashFileList;
             animeTabControl.ItemsSource = animeTabList;
 
@@ -283,7 +284,7 @@ namespace AniDBmini
                 else if ( epEntry.eid != 0 )
                 {
                     // Episode info already exist and no changes needed
-                    AniDBAPI.AppendDebugLine(String.Format("Episode entry already exists, skipping: {0}", file.path));
+                    AniDBAPI.AppendHashDebugLine(String.Format("Episode entry already exists, skipping: {0}", file.path));
                 }
                 else
                 {
@@ -295,7 +296,7 @@ namespace AniDBmini
             else if (file.fid != 0)
             {
                 // File already exists in database -> done
-                AniDBAPI.AppendDebugLine(String.Format("File entry already exists, skipping: {0}", file.path));
+                AniDBAPI.AppendHashDebugLine(String.Format("File entry already exists, skipping: {0}", file.path));
             }
             else
             {
@@ -485,15 +486,26 @@ namespace AniDBmini
             timer.Start();
         }
 
-        private void clearDebugLog(object sender, RoutedEventArgs e)
+        private void clearApiDebugLog(object sender, RoutedEventArgs e)
         {
-            m_aniDBAPI.DebugLog.Clear();
+            m_aniDBAPI.ApiDebugLog.Clear();
         }
 
-        private void debugListBox_SizeChanged(object sender, SizeChangedEventArgs e)
+        private void clearHashDebugLog(object sender, RoutedEventArgs e)
         {
-            if (debugListBoxScrollViewer.VerticalOffset == debugListBoxScrollViewer.ScrollableHeight)
-                debugListBoxScrollViewer.ScrollToBottom();
+            m_aniDBAPI.HashDebugLog.Clear();
+        }
+
+        private void apiDebugListBox_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (apiDebugListBoxScrollViewer.VerticalOffset == apiDebugListBoxScrollViewer.ScrollableHeight)
+                apiDebugListBoxScrollViewer.ScrollToBottom();
+        }
+
+        private void hashDebugListBox_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (hashDebugListBoxScrollViewer.VerticalOffset == hashDebugListBoxScrollViewer.ScrollableHeight)
+                hashDebugListBoxScrollViewer.ScrollToBottom();
         }
 
         #endregion Home Tab
@@ -796,7 +808,7 @@ namespace AniDBmini
             if (m_aniDBAPI.MyListDel(fEntry.lid))
             {
                 if (!String.IsNullOrEmpty(fEntry.path))
-                    AniDBAPI.AppendDebugLine(String.Format("Removed {0} from mylist.", Path.GetFileName(fEntry.path)));
+                    AniDBAPI.AppendApiDebugLine(String.Format("Removed {0} from mylist.", Path.GetFileName(fEntry.path)));
 
                 m_myList.DeleteFile(fEntry.lid);
                 MylistTreeListView.Refresh();
