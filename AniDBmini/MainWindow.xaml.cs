@@ -300,7 +300,7 @@ namespace AniDBmini
             }
             else
             {
-                m_aniDBAPI.File(item);
+                m_aniDBAPI.GetFileData(item);
             }
 
             
@@ -731,10 +731,10 @@ namespace AniDBmini
             {
                 FileEntry fEntry = m_myList.SelectFileFromAnime((entry as AnimeEntry).aid);
                 if (fEntry != null)
-                    m_aniDBAPI.File(fEntry);
+                    m_aniDBAPI.GetFileData(fEntry);
             }
             else if (entry is FileEntry)
-                m_aniDBAPI.File(entry as FileEntry);
+                m_aniDBAPI.GetFileData(entry as FileEntry);
         }
 
         /// <summary>

@@ -454,8 +454,8 @@
                             </ItemsControl>
                         </Grid>
                     </GroupBox>
-                    <Label Margin="10,294,177,10" >Pending API calls:</Label>
-                    <Label Name="PendingAPICalls" Margin="128,294,10,10">0</Label>
+                    <Label Margin="10,294,196,10" >Pending Tasks:</Label>
+                    <Label Name="PendingAPICalls" Margin="98,294,10,10">0</Label>
                     <Button Template="{StaticResource RefreshButtonTemplate}" Click="refreshStatsButton_Click" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,13,196,0" ToolTip="Refresh" Padding="0"/>
                     <GroupBox Header="Hash Debug" Grid.Column="1" VerticalAlignment="Top" MinHeight="170" MaxHeight="170" Margin="0,0,10,0">
                         <Grid Margin="0">

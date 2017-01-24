@@ -316,6 +316,7 @@ namespace AniDBmini
 
         #endregion Constructor
 
+        #region ANIDB_API
         #region AUTH
         private static bool LoginAllowed(out string nextAllowedAttemptStr)
         {
@@ -441,84 +442,108 @@ namespace AniDBmini
         /// </summary>
         public void Anime(int animeID)
         {
-            APIResponse response = Execute(String.Format("ANIME aid={0}&amask=B2E05EFE400080", animeID));
-
-            if (response.Code == RETURN_CODE.ANIME)
+            PrioritizedAPICommand(new Action(delegate
             {
-                AnimeTab aTab = (AnimeTab)mainWindow.Dispatcher.Invoke(new Func<AnimeTab>(delegate { return new AnimeTab(Regex.Split(response.Message, "\n")[1]); }));
-                OnAnimeTabFetched(aTab);
-            }
+                APIResponse response = Execute(String.Format("ANIME aid={0}&amask=B2E05EFE400080", animeID));
+
+                if (response.Code == RETURN_CODE.ANIME)
+                {
+                    AnimeTab aTab = (AnimeTab)mainWindow.Dispatcher.Invoke(new Func<AnimeTab>(delegate { return new AnimeTab(Regex.Split(response.Message, "\n")[1]); }));
+                    OnAnimeTabFetched(aTab);
+                }
+            }));
         }
 
-        public void File(HashItem item)
+        private void SyncGetFileData(HashItem item)
         {
-            Action fileInfo = new Action(delegate
+            PrioritizedAPICommand(new Action(delegate
             {
                 APIResponse response = Execute(String.Format("FILE size={0}&ed2k={1}&fmask=78006A28B0&amask=F0E0F0C0", item.Size, item.Hash));
 
                 if (response.Code == RETURN_CODE.FILE)
                     ParseFileData(item, response.Message);
-            });
-
-            PrioritizedCommand(fileInfo);
+            }));
         }
 
-        public void File(FileEntry entry)
+        public void GetFileData(HashItem item)
         {
             Action fileInfo = new Action(delegate
+            {
+                SyncGetFileData(item);
+            });
+
+            QueueAPICommand(fileInfo);
+        }
+
+        private void SyncGetFileData(FileEntry entry)
+        {
+            PrioritizedAPICommand(new Action(delegate
             {
                 APIResponse response = Execute(String.Format("FILE fid={0}&fmask=78006A28B0&amask=F0E0F0C0", entry.fid));
 
                 if (response.Code == RETURN_CODE.FILE)
                     ParseFileData(entry, response.Message);
+            }));
+        }
+
+        public void GetFileData(FileEntry entry)
+        {
+            Action fileInfo = new Action(delegate
+            {
+                SyncGetFileData(entry);
             });
 
-            PrioritizedCommand(fileInfo);
+            QueueAPICommand(fileInfo);
         }
 
         #endregion DATA
 
         #region MYLIST
 
-        public void MyListAdd(HashItem item)
+        private void SyncMyListAdd(HashItem item)
         {
-            Action addToList = new Action(delegate
+            PrioritizedAPICommand(new Action(delegate
             {
 #if DEBUG
                 AppendApiDebugLine(String.Format("Add to mylist: {0} Size={1} ED2K={2}", item.Path, item.Size, item.Hash));
 #endif
 
-                string r_msg = String.Empty;
                 APIResponse response = Execute(String.Format("MYLISTADD size={0}&ed2k={1}&viewed={2}&state={3}&edit={4}",
-                    item.Size, item.Hash, Convert.ToInt32(item.Watched), item.State, Convert.ToInt32(item.Edit)));
+                item.Size, item.Hash, Convert.ToInt32(item.Watched), item.State, Convert.ToInt32(item.Edit)));
 
                 switch (response.Code)
                 {
                     case RETURN_CODE.MYLIST_ENTRY_ADDED:
-                        File(item);
-                        r_msg = String.Format("Added {0} to mylist", item.Name);
+                        SyncGetFileData(item);
+                        AppendApiDebugLine(String.Format("Added {0} to mylist", item.Name));
                         break;
                     case RETURN_CODE.MYLIST_ENTRY_EDITED:
-                        File(item);
-                        r_msg = String.Format("Edited mylist entry for {0}", item.Name);
+                        SyncGetFileData(item);
+                        AppendApiDebugLine(String.Format("Edited mylist entry for {0}", item.Name));
                         break;
                     case RETURN_CODE.FILE_ALREADY_IN_MYLIST: // TODO: add auto edit to options.
                         item.Edit = true;
-                        MyListAdd(item);
+                        SyncMyListAdd(item);
                         return;
                     case RETURN_CODE.NO_SUCH_MYLIST_ENTRY:
                         item.Edit = false;
-                        MyListAdd(item);
+                        SyncMyListAdd(item);
                         return;
                     case RETURN_CODE.NO_SUCH_FILE:
-                        r_msg = "Error! File not in database";
+                        AppendApiDebugLine("Error! File not in database");
                         break;
                 }
+            }));
+        }
 
-                AppendApiDebugLine(r_msg);
+        public void MyListAdd(HashItem item)
+        {
+            Action addToList = new Action(delegate
+            {
+                SyncMyListAdd(item);
             });
 
-            PrioritizedCommand(addToList);
+            QueueAPICommand(addToList);
         }
 
         public bool MyListDel(int lid)
@@ -548,11 +573,11 @@ namespace AniDBmini
                 if (response.Code == RETURN_CODE.ANIME)
                 {
                     Action anime = new Action(delegate { Anime(int.Parse(Regex.Split(response.Message, "\n")[1].Split('|')[0])); });
-                    PrioritizedCommand(anime);
+                    PrioritizedAPICommand(anime);
                 }
             });
 
-            PrioritizedCommand(random);
+            QueueAPICommand(random);
         }
 
         #endregion MYLIST
@@ -590,39 +615,51 @@ namespace AniDBmini
         }
 
         #endregion File Hashing
+        #endregion
 
         #region Private Methods
+
+        private void UpdatePendingStats()
+        {
+            mainWindow.Dispatcher.Invoke(new Action(delegate
+            {
+                mainWindow.PendingAPICalls.Content = mainWindow.m_pendingTasks.ToString();
+            }));
+        }
 
         /// <summary>
         /// Executes an action after a certain amount of time has passed
         /// since the previous command was sent to the server.
         /// </summary>
         /// <param name="todo">Action that will be executed after waiting.</param>
-        private void PrioritizedCommand(Action Command)
+        private void PrioritizedAPICommand(Action Command)
+        {
+            lock (queueLock)
+            {
+                double secondsSince = DateTime.Now.Subtract(m_lastCommand).TotalSeconds;
+                int timeout = CalculateTimeout();
+
+                if (secondsSince < timeout)
+                    Thread.Sleep(TimeSpan.FromSeconds(timeout - secondsSince));
+
+                Command();
+            }
+        }
+
+        private void QueueAPICommand(Action command)
         {
             ++mainWindow.m_pendingTasks;
-            mainWindow.Dispatcher.Invoke(new Action(delegate
-            {
-                mainWindow.PendingAPICalls.Content = mainWindow.m_pendingTasks.ToString();
-            }));
+            UpdatePendingStats();
 
             ThreadPool.QueueUserWorkItem(new WaitCallback(delegate
             {
-                lock (queueLock)
+                PrioritizedAPICommand(new Action(delegate
                 {
-                    double secondsSince = DateTime.Now.Subtract(m_lastCommand).TotalSeconds;
-                    int timeout = CalculateTimeout();
+                    command();
+                }));
 
-                    if (secondsSince < timeout)
-                        Thread.Sleep(TimeSpan.FromSeconds(timeout - secondsSince));
-
-                    Command();
-                    --mainWindow.m_pendingTasks;
-                    mainWindow.Dispatcher.Invoke(new Action(delegate
-                    {
-                        mainWindow.PendingAPICalls.Content = mainWindow.m_pendingTasks.ToString();
-                    }));
-                }
+                --mainWindow.m_pendingTasks;
+                UpdatePendingStats();
             }));
         }
 
@@ -761,9 +798,13 @@ namespace AniDBmini
                             return Execute(cmd);
                         else
                         {
-                            var login = new LoginWindow();
-                            login.Show();
-                            mainWindow.Close();
+                            mainWindow.Dispatcher.Invoke(new Action(delegate
+                            {
+                                var login = new LoginWindow();
+                                login.Show();
+                                mainWindow.Close();
+                            }));
+
                             return new APIResponse();
                         }
                     }
