@@ -17,6 +17,7 @@ using Forms = System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Threading;
 
+using AniDBAPI;
 using AniDBmini.Collections;
 using AniDBmini.HashAlgorithms;
 
@@ -67,6 +68,7 @@ namespace AniDBmini
         private WindowState m_storedWindowState = WindowState.Normal;
 
         private BackgroundWorker m_HashWorker;
+        private FileHashing m_fileHasher = new FileHashing();
 
         private QueuedAniDBAPI m_aniDBAPI;
         private MylistDB m_myList;
@@ -105,7 +107,7 @@ namespace AniDBmini
 
             animeTabList.OnCountChanged += new CountChangedHandler(animeTabList_OnCountChanged);
 
-            m_aniDBAPI.OnFileHashingProgress += new FileHashingProgressHandler(OnFileHashingProgress);
+            m_fileHasher.OnFileHashingProgress += new FileHashingProgressHandler(OnFileHashingProgress);
             m_aniDBAPI.OnAnimeTabFetched += new AnimeTabFetchedHandler(OnAnimeTabFetched);
             m_aniDBAPI.OnFileInfoFetched += new FileInfoFetchedHandler(OnFileInfoFetched);
         }
@@ -227,7 +229,7 @@ namespace AniDBmini
                 totalQueueSize -= item.Size;
 
                 if (item == hashFileList[0])
-                    m_aniDBAPI.cancelHashing();
+                    m_fileHasher.cancelHashing();
             }
 
             lock (m_hashingLock)
@@ -597,7 +599,7 @@ namespace AniDBmini
             if (isHashing)
             {
                 m_HashWorker.CancelAsync();
-                m_aniDBAPI.cancelHashing();
+                m_fileHasher.cancelHashing();
 
                 OnHashWorkerCompleted(sender, null);
             }
@@ -613,8 +615,8 @@ namespace AniDBmini
                     return;
                 }
 
-                HashItem thisItem = hashFileList[0],
-                        _temp = m_aniDBAPI.ed2kHash(thisItem);
+                HashItem thisItem = hashFileList[0];
+                HashItem _temp = m_fileHasher.ed2kHash(thisItem);
 
                 if (isHashing && _temp != null) // if we did not abort remove item from queue and process
                 {

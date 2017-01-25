@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -11,10 +10,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows;
-using System.Diagnostics;
 
 using AniDBmini.Collections;
-using AniDBmini.HashAlgorithms;
 
 #endregion
 
@@ -241,7 +238,6 @@ namespace AniDBmini
         #region Fields
 
         private MainWindow mainWindow;
-        private Ed2k hasher = new Ed2k();
 
 #if !MOCK_REMOTE_API
         private UdpClient conn;
@@ -274,11 +270,6 @@ namespace AniDBmini
 
         public event FileInfoFetchedHandler OnFileInfoFetched = delegate { };
         public event AnimeTabFetchedHandler OnAnimeTabFetched = delegate { };
-        public event FileHashingProgressHandler OnFileHashingProgress
-        {
-            add { hasher.FileHashingProgress += value; }
-            remove { hasher.FileHashingProgress -= value; }
-        }
 
         #endregion Fields
 
@@ -583,40 +574,6 @@ namespace AniDBmini
         }
 
         #endregion MYLIST
-
-        #region File Hashing
-
-        public HashItem ed2kHash(HashItem item)
-        {
-            hasher.Clear();
-            FileInfo file = new FileInfo(item.Path);
-
-            using (FileStream fs = file.OpenRead())
-            {
-                DebugData.AppendHashDebugLine("Hashing " + item.Name);
-                byte[] temp;
-
-                if ((temp = hasher.ComputeHash(fs)) != null)
-                {
-                    item.Hash = string.Concat(temp.Select(b => b.ToString("x2")).ToArray());
-                    DebugData.AppendHashDebugLine("Ed2k hash: " + item.Hash);
-
-                    return item;
-                }
-                else
-                    DebugData.AppendHashDebugLine("Hashing aborted");
-
-                return null;
-            }
-        }
-
-        public void cancelHashing()
-        {
-            hasher.Cancel();
-            hasher.Clear();
-        }
-
-        #endregion File Hashing
         #endregion
 
         #region Private Methods

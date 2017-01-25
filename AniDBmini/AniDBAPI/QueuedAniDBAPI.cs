@@ -25,7 +25,6 @@ namespace AniDBmini
 
         public event FileInfoFetchedHandler OnFileInfoFetched = delegate { };
         public event AnimeTabFetchedHandler OnAnimeTabFetched = delegate { };
-        public event FileHashingProgressHandler OnFileHashingProgress = delegate { };
 
         public bool Connected { get { return anidbAPI.isConnected; } }
 
@@ -46,10 +45,6 @@ namespace AniDBmini
             anidbAPI.OnAnimeTabFetched += delegate (AnimeTab tab)
             {
                 OnAnimeTabFetched(tab);
-            };
-            anidbAPI.OnFileHashingProgress += delegate (object sender, FileHashingProgressArgs args)
-            {
-                OnFileHashingProgress(sender, args);
             };
         }
 
@@ -189,20 +184,6 @@ namespace AniDBmini
         }
 
         #endregion MYLIST
-
-        #region File Hashing
-
-        public HashItem ed2kHash(HashItem item)
-        {
-            return anidbAPI.ed2kHash(item);
-        }
-
-        public void cancelHashing()
-        {
-            anidbAPI.cancelHashing();
-        }
-
-        #endregion File Hashing
         #endregion
 
         #region Private Methods
