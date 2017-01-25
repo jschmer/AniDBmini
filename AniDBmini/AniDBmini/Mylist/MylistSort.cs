@@ -14,7 +14,7 @@ using AniDBmini.Collections;
 
 namespace AniDBmini
 {
-    public class MylistSort : IComparer<MylistEntry>
+    public class MylistSort : IComparer<MylistTreeEntry>
     {
         private delegate int TwoArgDelegate(AnimeEntry arg1, AnimeEntry arg2);
         private TwoArgDelegate m_listCompare;
@@ -62,7 +62,7 @@ namespace AniDBmini
             };
         }
 
-        int IComparer<MylistEntry>.Compare(MylistEntry X, MylistEntry Y)
+        int IComparer<MylistTreeEntry>.Compare(MylistTreeEntry X, MylistTreeEntry Y)
         {
             return m_listCompare(X.OriginalEntry as AnimeEntry, 
                 Y.OriginalEntry as AnimeEntry);

@@ -91,10 +91,10 @@ namespace AniDBmini
             {
                 string keyChar = e.Text;
                 TreeNode tn = Node.Tree.Root.Children.FirstOrDefault(x => x != Node && x.Index > Node.Index &&
-                    ((MylistEntry)x.Tag).Col0.StartsWith(keyChar, StringComparison.CurrentCultureIgnoreCase));
+                    ((MylistTreeEntry)x.Tag).Col0.StartsWith(keyChar, StringComparison.CurrentCultureIgnoreCase));
 
                 if (tn != null || (tn = Node.Tree.Root.Children.FirstOrDefault(x => x != Node &&
-                        ((MylistEntry)x.Tag).Col0.StartsWith(keyChar, StringComparison.CurrentCultureIgnoreCase))) != null)
+                        ((MylistTreeEntry)x.Tag).Col0.StartsWith(keyChar, StringComparison.CurrentCultureIgnoreCase))) != null)
                 {
                     tn.Tree.ScrollIntoView(tn);
                     e.Handled = true;

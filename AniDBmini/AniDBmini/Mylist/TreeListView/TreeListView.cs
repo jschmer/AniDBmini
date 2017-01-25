@@ -201,8 +201,8 @@ namespace AniDBmini
             foreach (TreeNode node in s_ExpandedNodes)
             {
                 TreeNode tn = Rows.FirstOrDefault(x =>
-                    (x.Tag as MylistEntry).OriginalEntry.GetType() == (node.Tag as MylistEntry).OriginalEntry.GetType() &&
-                    (x.Tag as MylistEntry).ID == (node.Tag as MylistEntry).ID);
+                    (x.Tag as MylistTreeEntry).OriginalEntry.GetType() == (node.Tag as MylistTreeEntry).OriginalEntry.GetType() &&
+                    (x.Tag as MylistTreeEntry).ID == (node.Tag as MylistTreeEntry).ID);
 
                 if (tn != null)
                     SetIsExpanded(tn, true);
@@ -210,8 +210,8 @@ namespace AniDBmini
 
             if (s_SelectedNode != null &&
                 (s_SelectedNode = Rows.FirstOrDefault(x =>
-                    (x.Tag as MylistEntry).OriginalEntry.GetType() == (s_SelectedNode.Tag as MylistEntry).OriginalEntry.GetType() &&
-                    (x.Tag as MylistEntry).ID == (s_SelectedNode.Tag as MylistEntry).ID)) != null)
+                    (x.Tag as MylistTreeEntry).OriginalEntry.GetType() == (s_SelectedNode.Tag as MylistTreeEntry).OriginalEntry.GetType() &&
+                    (x.Tag as MylistTreeEntry).ID == (s_SelectedNode.Tag as MylistTreeEntry).ID)) != null)
                 ScrollIntoView(s_SelectedNode);
         }
 

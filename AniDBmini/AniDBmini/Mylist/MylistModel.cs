@@ -32,8 +32,8 @@ namespace AniDBmini
         private MylistDB m_myList;
         private SortDescription m_currentSort;
 
-        private List<MylistEntry> _root = new List<MylistEntry>();
-        public List<MylistEntry> Root { get { return _root; } }
+        private List<MylistTreeEntry> _root = new List<MylistTreeEntry>();
+        public List<MylistTreeEntry> Root { get { return _root; } }
 
         #endregion Properties
 
@@ -44,7 +44,7 @@ namespace AniDBmini
             m_myList = myList;
 
             foreach (AnimeEntry a in m_myList.SelectEntries())
-                this.Root.Add(MylistEntry.FromAnime(a));
+                this.Root.Add(MylistTreeEntry.FromAnime(a));
         }
 
         #endregion Constructor
@@ -56,24 +56,24 @@ namespace AniDBmini
             if (parent == null)
                 return Root;
             else
-                return (parent as MylistEntry).Children;
+                return (parent as MylistTreeEntry).Children;
         }
 
         public void FetchChildren(object parent)
         {
-            MylistEntry entry = parent as MylistEntry;
+            MylistTreeEntry entry = parent as MylistTreeEntry;
 
             if (entry.OriginalEntry is AnimeEntry)
                 foreach (EpisodeEntry e in m_myList.SelectEpisodes(entry.ID))
-                    entry.Children.Add(MylistEntry.FromEpisode(e));
+                    entry.Children.Add(MylistTreeEntry.FromEpisode(e));
             else if (entry.OriginalEntry is EpisodeEntry)
                 foreach (FileEntry f in m_myList.SelectFiles(entry.ID))
-                    entry.Children.Add(MylistEntry.FromFile(f));
+                    entry.Children.Add(MylistTreeEntry.FromFile(f));
         }
 
         public bool HasChildren(object parent)
         {
-            return (parent as MylistEntry).HasChildren;
+            return (parent as MylistTreeEntry).HasChildren;
         }
 
         public ITreeModel Refresh()

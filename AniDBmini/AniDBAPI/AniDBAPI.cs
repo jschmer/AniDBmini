@@ -375,8 +375,24 @@ namespace AniDBmini
             return nextAllowedLoginAttempt <= DateTime.Now;
         }
 
+        private void LoginAccepted(string sessionKey)
+        {
+            isLoggedIn = true;
+
+            AppendApiDebugLine(String.Format("Logged in with session key '{0}'", sessionKey));
+
+            ConfigFile.Write("FailedLoginAttempts", "0");
+            ConfigFile.Write("sessionKey", sessionKey);
+            ConfigFile.Write("NextAllowedLoginAttempt", DateTime.Now.ToString(LoginAttemptDatetimeFormat));
+
+            StartAPICallWorker();
+        }
+
         public bool Login(string user, string pass)
         {
+            this.user = user;
+            this.pass = pass;
+
             string nextAllowedAttemptString;
             if (!LoginAllowed(out nextAllowedAttemptString))
             {
@@ -395,6 +411,7 @@ namespace AniDBmini
                 if (uptimeResponse.Code == RETURN_CODE.UPTIME)
                 {
                     AppendApiDebugLine(String.Format("Successfully reused session key '{0}'", sessionKey));
+                    LoginAccepted(sessionKey);
                     return true;
                 }
                 else
@@ -414,17 +431,7 @@ namespace AniDBmini
             {
                 sessionKey = response.Message.Split(' ')[1];
 
-                isLoggedIn = true;
-                this.user = user;
-                this.pass = pass;
-
-                AppendApiDebugLine(String.Format("Logged in with session key '{0}'", sessionKey));
-
-                ConfigFile.Write("FailedLoginAttempts", "0");
-                ConfigFile.Write("sessionKey", sessionKey);
-                ConfigFile.Write("NextAllowedLoginAttempt", DateTime.Now.ToString(LoginAttemptDatetimeFormat));
-
-                StartAPICallWorker();
+                LoginAccepted(sessionKey);
             }
             else if (response.Code == RETURN_CODE.LOGIN_IGNORED_RETRY_LATER)
             {
@@ -558,16 +565,30 @@ namespace AniDBmini
                 switch (response.Code)
                 {
                     case RETURN_CODE.MYLIST_ENTRY_ADDED:
-                        SyncGetFileData(item);
                         AppendApiDebugLine(String.Format("Added {0} to mylist", item.Name));
+
+                        SyncGetFileData(item);
                         break;
                     case RETURN_CODE.MYLIST_ENTRY_EDITED:
-                        SyncGetFileData(item);
                         AppendApiDebugLine(String.Format("Edited mylist entry for {0}", item.Name));
+
+                        SyncGetFileData(item);
                         break;
                     case RETURN_CODE.FILE_ALREADY_IN_MYLIST: // TODO: add auto edit to options.
-                        item.Edit = true;
-                        SyncMyListAdd(item);
+                        MyListEntry entry = ParseMyListEntry(response);
+                        if (entry != null && (entry.watched != item.Watched || entry.state != item.State))
+                        {
+                            AppendApiDebugLine(String.Format("Mylist entry for {0} already exists, adjusting status", item.Name));
+
+                            item.Edit = true;
+                            SyncMyListAdd(item);
+                        }
+                        else
+                        {
+                            AppendApiDebugLine(String.Format("Mylist entry for {0} already exists", item.Name));
+
+                            SyncGetFileData(item);
+                        }
                         return;
                     case RETURN_CODE.NO_SUCH_MYLIST_ENTRY:
                         item.Edit = false;
@@ -793,6 +814,24 @@ namespace AniDBmini
                 };
 
             OnFileInfoFetched(new FileInfoFetchedArgs(anime, episode, file));
+        }
+
+        private MyListEntry ParseMyListEntry(APIResponse response)
+        {
+            MyListEntry entry = null;
+
+            string[] messageParts = response.Message.Split('\n');
+            if (messageParts.Length > 1)
+            {
+                string dataString = messageParts[1];
+                string[] dataParts = dataString.Split('|');
+                if (dataParts.Length == 12)
+                {
+                    entry = new MyListEntry(dataParts);
+                }
+            }
+
+            return entry;
         }
 
         /// <summary>

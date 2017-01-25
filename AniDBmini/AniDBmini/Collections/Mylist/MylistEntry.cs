@@ -2,110 +2,102 @@
 #region Using Statements
 
 using System;
-using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data.SQLite;
 
 #endregion Using Statements
 
 namespace AniDBmini.Collections
 {
-    public class MylistEntry
+    public class MyListEntry : INotifyPropertyChanged
     {
-
         #region Properties
 
-        private List<MylistEntry> children = new List<MylistEntry>();
-        public List<MylistEntry> Children { get { return children; } }
+        public int lid { get; set; }
+        public int fid { get; set; }
+        public int eid { get; set; }
 
-        public bool HasChildren { get; private set; }
+        public int aid { get; set; }
+        public int gid { get; set; }
 
-        public int ID { get; private set; }
+        public UnixTimestamp date { get; set; }
 
-        public string Col0 { get; private set; }
-        public string Col1 { get; private set; }
-        public string Col2 { get; private set; }
-        public string Col3 { get; private set; }
-        public string Col4 { get; private set; }
-        public string Col5 { get; private set; }
+        /// <summary>
+        /// <para>0 - unknown - state is unknown or the user doesn't want to provide this information</para>
+        /// <para>1 - on hdd - the file is stored on hdd (but is not shared)</para>
+        /// <para>2 - on cd - the file is stored on cd</para>
+        /// <para>3 - deleted - the file has been deleted or is not available for other reasons (i.e. reencoded)</para>
+        /// </summary>
+        public int state;
 
-        public object OriginalEntry { get; set; }
+        public bool watched { get { return watcheddate != new UnixTimestamp(0); } }
+        public UnixTimestamp watcheddate { get; private set; }
+
+        public string storage { get; set; }
+        public string source { get; set; }
+        public string other { get; set; }
+
+        public int filestate { get; set; }
 
         #endregion Properties
 
         #region Constructors
 
-        public static MylistEntry FromAnime(AnimeEntry entry)
+        public MyListEntry() { }
+
+        /// <summary>
+        /// Used for an entry that is to be inserted into the database
+        /// from a recently hashed HashItem.
+        /// </summary>
+        public MyListEntry(string[] dataParts)
         {
-            MylistEntry m_entry = new MylistEntry();
-            TimeSpan length = TimeSpan.FromSeconds(entry.length);
+            // {int4 lid}|{int4 fid}|{int4 eid}|{int4 aid}|{int4 gid}|{int4 date}|{int2 state}|{int4 viewdate}|{str storage}|{str source}|{str other}|{int2 filestate}
+            if (dataParts.Length != 12)
+            {
+                throw new Exception("Not supported size for dataParts in MyListEntry!");
+            }
 
-            m_entry.OriginalEntry = entry;
-            m_entry.ID = entry.aid;
-            m_entry.HasChildren = entry.eps_have > 0;
+            lid = int.Parse(dataParts[0]);
+            fid = int.Parse(dataParts[1]);
+            eid = int.Parse(dataParts[2]);
+            aid = int.Parse(dataParts[3]);
+            gid = int.Parse(dataParts[4]);
 
-            m_entry.Col0 = entry.title;
-            m_entry.Col1 = String.Format("{0}/{1}{2}", entry.eps_have,
-                                                       (entry.eps_total == 0) ? "TBC" : entry.eps_total.ToString(),
-                                                       (entry.spl_have > 0) ? String.Format("+{0}", entry.spl_have) : null);
-            m_entry.Col2 = String.Format("{0}/{1}{2}", entry.eps_watched,
-                                                       entry.eps_have,
-                                                       (entry.spl_watched > 0) ? String.Format("+{0}", entry.spl_watched) : null);
-            m_entry.Col3 = entry.year;
-            m_entry.Col4 = length.ToFormattedLength();
-            m_entry.Col5 = entry.size.ToFormattedBytes();
+            date = new UnixTimestamp(int.Parse(dataParts[5]));
 
-            return m_entry;
-        }
+            state = int.Parse(dataParts[6]);
 
-        public static MylistEntry FromEpisode(EpisodeEntry entry)
-        {
-            MylistEntry m_entry = new MylistEntry();
-            TimeSpan length = TimeSpan.FromSeconds(entry.length);
+            watcheddate = new UnixTimestamp(int.Parse(dataParts[7]));
 
-            m_entry.OriginalEntry = entry;
-            m_entry.ID = entry.eid;
-            m_entry.HasChildren = entry.hasFiles;
+            storage = dataParts[8];
+            source = dataParts[9];
+            other = dataParts[10];
 
-            m_entry.Col0 = String.Format("{0}: {1}", (entry.spl_epno == null) ? entry.epno.ToString() : entry.spl_epno, entry.english);
-            m_entry.Col2 = entry.watched ? "Yes" : "No";
-
-            if (entry.airdate != null)
-                m_entry.Col3 = entry.airdate.ToDateTime(false).ToShortDateString();
-
-            m_entry.Col4 = length.ToFormattedLength();
-            m_entry.Col5 = entry.size.ToFormattedBytes();
-
-            return m_entry;
-        }
-
-        public static MylistEntry FromFile(FileEntry entry)
-        {
-            MylistEntry m_entry = new MylistEntry();
-            TimeSpan length = TimeSpan.FromSeconds(entry.length);
-
-            m_entry.OriginalEntry = entry;
-            m_entry.ID = entry.fid;
-
-            string fileInfo = String.Empty;
-
-            if (!string.IsNullOrEmpty(entry.vres) || !string.IsNullOrEmpty(entry.source) ||
-                !string.IsNullOrEmpty(entry.vcodec) || !string.IsNullOrEmpty(entry.acodec))
-                fileInfo = String.Format(" ({0} {1} {2} {3})", entry.vres, entry.source, entry.vcodec, "- " + entry.acodec);
-
-            if (!entry.generic)
-                m_entry.Col0 = String.Format("[{0}]{1}", entry.Group.group_abbr, fileInfo.Replace("  ", " "));
-            else
-                m_entry.Col0 = "generic file";
-
-            if (entry.watcheddate != null)
-                m_entry.Col2 = String.Format("{0} {1}", entry.watcheddate.ToDateTime().ToShortDateString(),
-                                                        entry.watcheddate.ToDateTime().ToShortTimeString());
-            m_entry.Col4 = length.ToFormattedLength();
-            m_entry.Col5 = entry.size.ToFormattedBytes();
-
-            return m_entry;
+            filestate = int.Parse(dataParts[11]);
         }
 
         #endregion Constructors
+
+        #region INotifyPropertyChanged
+
+        /// <summary>
+        /// event for INotifyPropertyChanged.PropertyChanged
+        /// </summary>
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        /// <summary>
+        /// raise the PropertyChanged event
+        /// </summary>
+        /// <param name="propName"></param>
+        protected void NotifyPropertyChanged(string propName)
+        {
+            if (this.PropertyChanged != null)
+            {
+                PropertyChanged(this, new PropertyChangedEventArgs(propName));
+            }
+        }
+
+        #endregion
 
     }
 }

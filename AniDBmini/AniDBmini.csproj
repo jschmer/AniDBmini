@@ -189,7 +189,8 @@
       <SubType>Designer</SubType>
     </Page>
     <Compile Include="AniDBmini\Collections\Mylist\GroupEntry.cs" />
-    <Compile Include="AniDBmini\Collections\Mylist\MylistEntry.cs" />
+    <Compile Include="AniDBmini\Collections\Mylist\MyListEntry.cs" />
+    <Compile Include="AniDBmini\Collections\Mylist\MylistTreeEntry.cs" />
     <Compile Include="AniDBmini\Converters.cs" />
     <Compile Include="AniDBmini\Collections\AnimeTab.cs" />
     <Compile Include="AniDBAPI\AniDBAPI.cs" />
