@@ -108,7 +108,7 @@ namespace AniDBmini
             animeTabList.OnCountChanged += new CountChangedHandler(animeTabList_OnCountChanged);
 
             m_fileHasher.OnFileHashingProgress += new FileHashingProgressHandler(OnFileHashingProgress);
-            m_aniDBAPI.OnAnimeTabFetched += new AnimeTabFetchedHandler(OnAnimeTabFetched);
+            m_aniDBAPI.OnAnimeInfoFetched += new AnimeInfoFetchedHandler(OnAnimeTabFetched);
             m_aniDBAPI.OnFileInfoFetched += new FileInfoFetchedHandler(OnFileInfoFetched);
         }
 
@@ -423,9 +423,12 @@ namespace AniDBmini
             m_aniDBAPI.RandomAnime(int.Parse(mi.Tag.ToString()));
         }
 
-        private void OnAnimeTabFetched(AnimeTab aTab)
+        private void OnAnimeTabFetched(string rawAnimeData)
         {
-            animeTabList.Add(aTab);
+            Dispatcher.Invoke(delegate
+            {
+                animeTabList.Add(new AnimeTab(rawAnimeData));
+            });
         }
 
         private void OnFileInfoFetched(FileInfoFetchedArgs e)

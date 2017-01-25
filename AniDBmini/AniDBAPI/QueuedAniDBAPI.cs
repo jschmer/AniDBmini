@@ -24,7 +24,7 @@ namespace AniDBmini
         private AutoResetEvent stopEvent = new AutoResetEvent(false);
 
         public event FileInfoFetchedHandler OnFileInfoFetched = delegate { };
-        public event AnimeTabFetchedHandler OnAnimeTabFetched = delegate { };
+        public event AnimeInfoFetchedHandler OnAnimeInfoFetched = delegate { };
 
         public bool Connected { get { return anidbAPI.isConnected; } }
 
@@ -42,9 +42,9 @@ namespace AniDBmini
             {
                 OnFileInfoFetched(args);
             };
-            anidbAPI.OnAnimeTabFetched += delegate (AnimeTab tab)
+            anidbAPI.OnAnimeInfoFetched += delegate (string rawAnimeData)
             {
-                OnAnimeTabFetched(tab);
+                OnAnimeInfoFetched(rawAnimeData);
             };
         }
 
@@ -190,13 +190,13 @@ namespace AniDBmini
 
         private void QueueAPICommand(Action command)
         {
-            anidbAPI.MainWindow.PendingTasks++;
+            MainWindow.PendingTasks++;
 
             apiCallQueue.Enqueue(new Action(delegate
             {
                 command();
 
-                anidbAPI.MainWindow.PendingTasks--;
+                MainWindow.PendingTasks--;
             }));
         }
 
@@ -204,9 +204,11 @@ namespace AniDBmini
 
         #region Properties & Static Methods
 
+        private MainWindow mainWindow;
         public MainWindow MainWindow
         {
-            set { anidbAPI.MainWindow = value; }
+            set { mainWindow = value; }
+            private get { return mainWindow; }
         }
 
         public IPEndPoint APIServer { get { return anidbAPI.APIServer; } }

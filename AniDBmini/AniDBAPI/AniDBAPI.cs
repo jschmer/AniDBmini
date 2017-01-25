@@ -35,13 +35,13 @@ namespace AniDBmini
     }
 
     public delegate void FileInfoFetchedHandler(FileInfoFetchedArgs fInfo);
-    public delegate void AnimeTabFetchedHandler(AnimeTab aTab);
+    public delegate void AnimeInfoFetchedHandler(string animeData);
 
     #endregion Args & Delegates
 
     public class AniDBAPI
     {
-        #region Enums
+        #region Types
 
         private enum RETURN_CODE
         {
@@ -205,17 +205,13 @@ namespace AniDBmini
             AID
         };
 
-        #endregion Enums
-
-        #region Structs
-
         private struct APIResponse
         {
             public string Message;
             public RETURN_CODE Code;
         }
 
-        #endregion Structs
+        #endregion Types
 
         #region Mock Stuff
 #if MOCK_REMOTE_API
@@ -233,11 +229,9 @@ namespace AniDBmini
             { "LOGOUT", CreateResponse(RETURN_CODE.LOGGED_OUT, "LOGGED OUT") },
         };
 #endif
-        #endregion
+        #endregion Mock Stuff
 
         #region Fields
-
-        private MainWindow mainWindow;
 
 #if !MOCK_REMOTE_API
         private UdpClient conn;
@@ -269,7 +263,7 @@ namespace AniDBmini
         public bool isConnected;
 
         public event FileInfoFetchedHandler OnFileInfoFetched = delegate { };
-        public event AnimeTabFetchedHandler OnAnimeTabFetched = delegate { };
+        public event AnimeInfoFetchedHandler OnAnimeInfoFetched = delegate { };
 
         #endregion Fields
 
@@ -450,8 +444,8 @@ namespace AniDBmini
 
                 if (response.Code == RETURN_CODE.ANIME)
                 {
-                    AnimeTab aTab = (AnimeTab)mainWindow.Dispatcher.Invoke(new Func<AnimeTab>(delegate { return new AnimeTab(Regex.Split(response.Message, "\n")[1]); }));
-                    OnAnimeTabFetched(aTab);
+                    string rawAnimeData = Regex.Split(response.Message, "\n")[1];
+                    OnAnimeInfoFetched(rawAnimeData);
                 }
             }));
         }
@@ -782,12 +776,6 @@ namespace AniDBmini
         #endregion Private Methods
 
         #region Properties & Static Methods
-
-        public MainWindow MainWindow
-        {
-            get { return mainWindow; }
-            set { mainWindow = value; }
-        }
 
         public IPEndPoint APIServer { get { return apiserver; } }
 
