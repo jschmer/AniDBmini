@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -232,6 +233,7 @@ namespace AniDBmini
         {
             { "AUTH", CreateResponse(RETURN_CODE.LOGIN_ACCEPTED, "ABCDE LOGIN ACCEPTED") },
             { "MYLISTSTATS", CreateResponse(RETURN_CODE.MYLIST_STATS, "MYLIST STATS", "281|6406|6772|1406764|0|0|0|0|100|0|4|4|99|6326|0|0|150395") },
+            { "MYLISTADD", CreateResponse(RETURN_CODE.MYLIST_ENTRY_ADDED, "WHATEVER", "1") },
             { "UPTIME", CreateResponse(RETURN_CODE.UPTIME, "UPTIME", "1503955") },
             { "LOGOUT", CreateResponse(RETURN_CODE.LOGGED_OUT, "LOGGED OUT") },
         };
@@ -251,6 +253,10 @@ namespace AniDBmini
 
         private Object queueLock = new Object();
         private List<DateTime> queryLog = new List<DateTime>();
+        private ConcurrentQueue<Action> apiCallQueue = new ConcurrentQueue<Action>();
+
+        private Thread apiCallWorker = null;
+        private AutoResetEvent stopEvent = new AutoResetEvent(false);
 
         private byte[] data = new byte[1400];
         private bool isLoggedIn;
@@ -315,6 +321,40 @@ namespace AniDBmini
         }
 
         #endregion Constructor
+
+        #region APICALL_WORKER
+        private void StartAPICallWorker()
+        {
+            StopAPICallWorker();
+
+            stopEvent.Reset();
+            apiCallWorker = new Thread(ProcessAPICalls);
+            apiCallWorker.Start();
+        }
+
+        private void StopAPICallWorker()
+        {
+            if (apiCallWorker != null)
+            {
+                stopEvent.Set();
+                apiCallWorker.Join();
+            }
+            apiCallWorker = null;
+        }
+
+        private void ProcessAPICalls()
+        {
+            while (!stopEvent.WaitOne(TimeSpan.FromSeconds(1)))
+            {
+                Action action;
+                if (apiCallQueue.TryDequeue(out action))
+                {
+                    action();
+                }
+            }
+
+        }
+        #endregion
 
         #region ANIDB_API
         #region AUTH
@@ -383,6 +423,8 @@ namespace AniDBmini
                 ConfigFile.Write("FailedLoginAttempts", "0");
                 ConfigFile.Write("sessionKey", sessionKey);
                 ConfigFile.Write("NextAllowedLoginAttempt", DateTime.Now.ToString(LoginAttemptDatetimeFormat));
+
+                StartAPICallWorker();
             }
             else if (response.Code == RETURN_CODE.LOGIN_IGNORED_RETRY_LATER)
             {
@@ -431,6 +473,8 @@ namespace AniDBmini
                     MessageBox.Show(String.Format("Failed to log out from anidb!\n{0}", response.Message), "Failure", MessageBoxButton.OK);
                 }
             }
+
+            StopAPICallWorker();
         }
 
         #endregion AUTH
@@ -548,7 +592,12 @@ namespace AniDBmini
 
         public bool MyListDel(int lid)
         {
-            return Execute(String.Format("MYLISTDEL lid={0}", lid)).Code == RETURN_CODE.MYLIST_ENTRY_DELETED;
+            bool result = false;
+            PrioritizedAPICommand(new Action(delegate
+            {
+                result = Execute(String.Format("MYLISTDEL lid={0}", lid)).Code == RETURN_CODE.MYLIST_ENTRY_DELETED;
+            }));
+            return result;
         }
 
         /// <summary>
@@ -557,8 +606,13 @@ namespace AniDBmini
         /// <returns>Array of stat values.</returns>
         public int[] MyListStats()
         {
-            string r_msg = Execute("MYLISTSTATS").Message;
-            return Array.ConvertAll<string, int>(Regex.Split(r_msg, "\n")[1].Split('|'), delegate (string s) { return int.Parse(s); });
+            int[] result = null;
+            PrioritizedAPICommand(new Action(delegate
+            {
+                string r_msg = Execute("MYLISTSTATS").Message;
+                result = Array.ConvertAll<string, int>(Regex.Split(r_msg, "\n")[1].Split('|'), delegate (string s) { return int.Parse(s); });
+            }));
+            return result;
         }
 
         /// <summary>
@@ -651,12 +705,9 @@ namespace AniDBmini
             ++mainWindow.m_pendingTasks;
             UpdatePendingStats();
 
-            ThreadPool.QueueUserWorkItem(new WaitCallback(delegate
+            apiCallQueue.Enqueue(new Action(delegate
             {
-                PrioritizedAPICommand(new Action(delegate
-                {
-                    command();
-                }));
+                command();
 
                 --mainWindow.m_pendingTasks;
                 UpdatePendingStats();
@@ -798,13 +849,6 @@ namespace AniDBmini
                             return Execute(cmd);
                         else
                         {
-                            mainWindow.Dispatcher.Invoke(new Action(delegate
-                            {
-                                var login = new LoginWindow();
-                                login.Show();
-                                mainWindow.Close();
-                            }));
-
                             return new APIResponse();
                         }
                     }
@@ -827,7 +871,7 @@ namespace AniDBmini
             }
 
 #if DEBUG
-            AppendDebugLine(String.Format("Response: {0}", response.Message));
+            AppendApiDebugLine(String.Format("Response: {0}", response.Message));
 #endif
 
             return response;
