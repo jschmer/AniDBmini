@@ -195,6 +195,7 @@
     <Compile Include="AniDBmini\Converters.cs" />
     <Compile Include="AniDBmini\Collections\AnimeTab.cs" />
     <Compile Include="AniDBAPI\AniDBAPI.cs" />
+    <Compile Include="AniDBmini\DebugData.cs" />
     <Compile Include="AniDBmini\Mylist\MylistModel.cs" />
     <Compile Include="AniDBmini\Mylist\MylistSort.cs" />
     <Compile Include="AniDBmini\Mylist\TreeListView\Collection.cs" />

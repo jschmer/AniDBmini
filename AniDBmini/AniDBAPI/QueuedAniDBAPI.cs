@@ -229,8 +229,6 @@ namespace AniDBmini
         }
 
         public IPEndPoint APIServer { get { return anidbAPI.APIServer; } }
-        public TSObservableCollection<DebugLine> ApiDebugLog { get { return anidbAPI.ApiDebugLog; } }
-        public TSObservableCollection<DebugLine> HashDebugLog { get { return anidbAPI.HashDebugLog; } }
 
         #endregion Properties
 
