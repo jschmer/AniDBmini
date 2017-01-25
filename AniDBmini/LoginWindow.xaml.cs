@@ -35,8 +35,6 @@ namespace AniDBmini
             MainWindow main = new MainWindow(m_aniDBAPI);            
             main.Show();
 
-            m_aniDBAPI.MainWindow = main;
-
             this.Close();
         }
 

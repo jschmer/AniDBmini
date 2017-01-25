@@ -110,6 +110,11 @@ namespace AniDBmini
             m_fileHasher.OnFileHashingProgress += new FileHashingProgressHandler(OnFileHashingProgress);
             m_aniDBAPI.OnAnimeInfoFetched += new AnimeInfoFetchedHandler(OnAnimeTabFetched);
             m_aniDBAPI.OnFileInfoFetched += new FileInfoFetchedHandler(OnFileInfoFetched);
+
+            m_aniDBAPI.OnPendingTaskCountChanged += delegate(int count)
+            {
+                PendingTasks = count;
+            };
         }
 
         #endregion Constructor

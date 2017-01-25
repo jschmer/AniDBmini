@@ -13,6 +13,8 @@ using AniDBmini.HashAlgorithms;
 
 namespace AniDBmini
 {
+    public delegate void PendingTaskCountChangedHandler(int count);
+
     public class QueuedAniDBAPI
     {
         #region Fields
@@ -26,7 +28,20 @@ namespace AniDBmini
         public event FileInfoFetchedHandler OnFileInfoFetched = delegate { };
         public event AnimeInfoFetchedHandler OnAnimeInfoFetched = delegate { };
 
+        public event PendingTaskCountChangedHandler OnPendingTaskCountChanged = delegate { };
+
         public bool Connected { get { return anidbAPI.isConnected; } }
+
+        private int pendingTaskCount = 0;
+        private int PendingTaskCount
+        {
+            get { return pendingTaskCount; }
+            set
+            {
+                pendingTaskCount = value;
+                OnPendingTaskCountChanged(pendingTaskCount);
+            }
+        }
 
         #endregion Fields
 
@@ -190,26 +205,19 @@ namespace AniDBmini
 
         private void QueueAPICommand(Action command)
         {
-            MainWindow.PendingTasks++;
+            PendingTaskCount++;
 
             apiCallQueue.Enqueue(new Action(delegate
             {
                 command();
 
-                MainWindow.PendingTasks--;
+                PendingTaskCount--;
             }));
         }
 
         #endregion Private Methods
 
         #region Properties & Static Methods
-
-        private MainWindow mainWindow;
-        public MainWindow MainWindow
-        {
-            set { mainWindow = value; }
-            private get { return mainWindow; }
-        }
 
         public IPEndPoint APIServer { get { return anidbAPI.APIServer; } }
 
