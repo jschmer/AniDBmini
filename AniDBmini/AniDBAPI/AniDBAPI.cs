@@ -3,7 +3,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -13,7 +12,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows;
 using System.Diagnostics;
-using System.Windows.Threading;
 
 using AniDBmini.Collections;
 using AniDBmini.HashAlgorithms;
@@ -253,10 +251,6 @@ namespace AniDBmini
 
         private Object queueLock = new Object();
         private List<DateTime> queryLog = new List<DateTime>();
-        private ConcurrentQueue<Action> apiCallQueue = new ConcurrentQueue<Action>();
-
-        private Thread apiCallWorker = null;
-        private AutoResetEvent stopEvent = new AutoResetEvent(false);
 
         private byte[] data = new byte[1400];
         private bool isLoggedIn;
@@ -281,6 +275,11 @@ namespace AniDBmini
 
         public event FileInfoFetchedHandler OnFileInfoFetched = delegate { };
         public event AnimeTabFetchedHandler OnAnimeTabFetched = delegate { };
+        public event FileHashingProgressHandler OnFileHashingProgress
+        {
+            add { hasher.FileHashingProgress += value; }
+            remove { hasher.FileHashingProgress -= value; }
+        }
 
         #endregion Fields
 
@@ -322,40 +321,6 @@ namespace AniDBmini
 
         #endregion Constructor
 
-        #region APICALL_WORKER
-        private void StartAPICallWorker()
-        {
-            StopAPICallWorker();
-
-            stopEvent.Reset();
-            apiCallWorker = new Thread(ProcessAPICalls);
-            apiCallWorker.Start();
-        }
-
-        private void StopAPICallWorker()
-        {
-            if (apiCallWorker != null)
-            {
-                stopEvent.Set();
-                apiCallWorker.Join();
-            }
-            apiCallWorker = null;
-        }
-
-        private void ProcessAPICalls()
-        {
-            while (!stopEvent.WaitOne(TimeSpan.FromSeconds(1)))
-            {
-                Action action;
-                if (apiCallQueue.TryDequeue(out action))
-                {
-                    action();
-                }
-            }
-
-        }
-        #endregion
-
         #region ANIDB_API
         #region AUTH
         private static bool LoginAllowed(out string nextAllowedAttemptStr)
@@ -384,8 +349,6 @@ namespace AniDBmini
             ConfigFile.Write("FailedLoginAttempts", "0");
             ConfigFile.Write("sessionKey", sessionKey);
             ConfigFile.Write("NextAllowedLoginAttempt", DateTime.Now.ToString(LoginAttemptDatetimeFormat));
-
-            StartAPICallWorker();
         }
 
         public bool Login(string user, string pass)
@@ -480,8 +443,6 @@ namespace AniDBmini
                     MessageBox.Show(String.Format("Failed to log out from anidb!\n{0}", response.Message), "Failure", MessageBoxButton.OK);
                 }
             }
-
-            StopAPICallWorker();
         }
 
         #endregion AUTH
@@ -505,7 +466,7 @@ namespace AniDBmini
             }));
         }
 
-        private void SyncGetFileData(HashItem item)
+        public void GetFileData(HashItem item)
         {
             PrioritizedAPICommand(new Action(delegate
             {
@@ -516,17 +477,7 @@ namespace AniDBmini
             }));
         }
 
-        public void GetFileData(HashItem item)
-        {
-            Action fileInfo = new Action(delegate
-            {
-                SyncGetFileData(item);
-            });
-
-            QueueAPICommand(fileInfo);
-        }
-
-        private void SyncGetFileData(FileEntry entry)
+        public void GetFileData(FileEntry entry)
         {
             PrioritizedAPICommand(new Action(delegate
             {
@@ -537,21 +488,11 @@ namespace AniDBmini
             }));
         }
 
-        public void GetFileData(FileEntry entry)
-        {
-            Action fileInfo = new Action(delegate
-            {
-                SyncGetFileData(entry);
-            });
-
-            QueueAPICommand(fileInfo);
-        }
-
         #endregion DATA
 
         #region MYLIST
 
-        private void SyncMyListAdd(HashItem item)
+        public void MyListAdd(HashItem item)
         {
             PrioritizedAPICommand(new Action(delegate
             {
@@ -567,12 +508,12 @@ namespace AniDBmini
                     case RETURN_CODE.MYLIST_ENTRY_ADDED:
                         AppendApiDebugLine(String.Format("Added {0} to mylist", item.Name));
 
-                        SyncGetFileData(item);
+                        GetFileData(item);
                         break;
                     case RETURN_CODE.MYLIST_ENTRY_EDITED:
                         AppendApiDebugLine(String.Format("Edited mylist entry for {0}", item.Name));
 
-                        SyncGetFileData(item);
+                        GetFileData(item);
                         break;
                     case RETURN_CODE.FILE_ALREADY_IN_MYLIST: // TODO: add auto edit to options.
                         MyListEntry entry = ParseMyListEntry(response);
@@ -581,34 +522,24 @@ namespace AniDBmini
                             AppendApiDebugLine(String.Format("Mylist entry for {0} already exists, adjusting status", item.Name));
 
                             item.Edit = true;
-                            SyncMyListAdd(item);
+                            MyListAdd(item);
                         }
                         else
                         {
                             AppendApiDebugLine(String.Format("Mylist entry for {0} already exists", item.Name));
 
-                            SyncGetFileData(item);
+                            GetFileData(item);
                         }
                         return;
                     case RETURN_CODE.NO_SUCH_MYLIST_ENTRY:
                         item.Edit = false;
-                        SyncMyListAdd(item);
+                        MyListAdd(item);
                         return;
                     case RETURN_CODE.NO_SUCH_FILE:
                         AppendApiDebugLine("Error! File not in database");
                         break;
                 }
             }));
-        }
-
-        public void MyListAdd(HashItem item)
-        {
-            Action addToList = new Action(delegate
-            {
-                SyncMyListAdd(item);
-            });
-
-            QueueAPICommand(addToList);
         }
 
         public bool MyListDel(int lid)
@@ -642,17 +573,14 @@ namespace AniDBmini
         /// <param name="type">type: 0=from db, 1=watched, 2=unwatched, 3=all mylist</param>
         public void RandomAnime(int type)
         {
-            Action random = new Action(delegate
+            PrioritizedAPICommand(new Action(delegate
             {
                 APIResponse response = Execute(String.Format("RANDOMANIME type={0}", type));
                 if (response.Code == RETURN_CODE.ANIME)
                 {
-                    Action anime = new Action(delegate { Anime(int.Parse(Regex.Split(response.Message, "\n")[1].Split('|')[0])); });
-                    PrioritizedAPICommand(anime);
+                    Anime(int.Parse(Regex.Split(response.Message, "\n")[1].Split('|')[0]));
                 }
-            });
-
-            QueueAPICommand(random);
+            }));
         }
 
         #endregion MYLIST
@@ -694,14 +622,6 @@ namespace AniDBmini
 
         #region Private Methods
 
-        private void UpdatePendingStats()
-        {
-            mainWindow.Dispatcher.Invoke(new Action(delegate
-            {
-                mainWindow.PendingAPICalls.Content = mainWindow.m_pendingTasks.ToString();
-            }));
-        }
-
         /// <summary>
         /// Executes an action after a certain amount of time has passed
         /// since the previous command was sent to the server.
@@ -719,20 +639,6 @@ namespace AniDBmini
 
                 Command();
             }
-        }
-
-        private void QueueAPICommand(Action command)
-        {
-            ++mainWindow.m_pendingTasks;
-            UpdatePendingStats();
-
-            apiCallQueue.Enqueue(new Action(delegate
-            {
-                command();
-
-                --mainWindow.m_pendingTasks;
-                UpdatePendingStats();
-            }));
         }
 
         /// <summary>
@@ -926,7 +832,6 @@ namespace AniDBmini
             apiDebugLog.Add(new DebugLine(DateTime.Now.ToLongTimeString(), line.ToString()));
             Debug.WriteLine(String.Format("[{0}] {1} {2}", Thread.CurrentThread.ManagedThreadId, DateTime.Now.ToLongTimeString(), line.ToString()));
         }
-
         public static void AppendHashDebugLine(string line)
         {
             hashDebugLog.Add(new DebugLine(DateTime.Now.ToLongTimeString(), line.ToString()));
@@ -935,18 +840,13 @@ namespace AniDBmini
 
         public MainWindow MainWindow
         {
+            get { return mainWindow; }
             set { mainWindow = value; }
         }
 
         public IPEndPoint APIServer { get { return apiserver; } }
         public TSObservableCollection<DebugLine> ApiDebugLog { get { return apiDebugLog; } }
         public TSObservableCollection<DebugLine> HashDebugLog { get { return hashDebugLog; } }
-
-        public event FileHashingProgressHandler OnFileHashingProgress
-        {
-            add { hasher.FileHashingProgress += value; }
-            remove { hasher.FileHashingProgress -= value; }
-        }
 
         #endregion Properties
 

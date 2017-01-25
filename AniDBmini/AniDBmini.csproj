@@ -188,6 +188,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Compile Include="AniDBAPI\QueuedAniDBAPI.cs" />
     <Compile Include="AniDBmini\Collections\Mylist\GroupEntry.cs" />
     <Compile Include="AniDBmini\Collections\Mylist\MyListEntry.cs" />
     <Compile Include="AniDBmini\Collections\Mylist\MylistTreeEntry.cs" />

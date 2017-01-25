@@ -46,12 +46,19 @@ namespace AniDBmini
         }
 
         private int _pendingTasks;
-        public int m_pendingTasks
+        public int PendingTasks
         {
-            get { return _pendingTasks; }
+            get
+            {
+                return _pendingTasks;
+            }
             set
             {
                 _pendingTasks = value;
+                Dispatcher.Invoke(delegate
+                {
+                    PendingAPICalls.Content = _pendingTasks.ToString();
+                });
             }
         }
 
@@ -61,7 +68,7 @@ namespace AniDBmini
 
         private BackgroundWorker m_HashWorker;
 
-        private AniDBAPI m_aniDBAPI;
+        private QueuedAniDBAPI m_aniDBAPI;
         private MylistDB m_myList;
 
         private DateTime m_hashingStartTime;
@@ -81,7 +88,7 @@ namespace AniDBmini
 
         #region Constructor
 
-        public MainWindow(AniDBAPI api)
+        public MainWindow(QueuedAniDBAPI api)
         {
             m_aniDBAPI = api;
             AniDBAPI.AppendApiDebugLine("Welcome to AniDBmini, connected to: " + m_aniDBAPI.APIServer);

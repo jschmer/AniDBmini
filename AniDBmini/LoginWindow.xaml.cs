@@ -15,7 +15,7 @@ namespace AniDBmini
 
         #region Fields
 
-        private AniDBAPI m_aniDB;
+        private QueuedAniDBAPI m_aniDBAPI;
 
         #endregion Fields
 
@@ -32,10 +32,10 @@ namespace AniDBmini
 
         private void StartMainWindow()
         {
-            MainWindow main = new MainWindow(m_aniDB);            
+            MainWindow main = new MainWindow(m_aniDBAPI);            
             main.Show();
 
-            m_aniDB.MainWindow = main;
+            m_aniDBAPI.MainWindow = main;
 
             this.Close();
         }
@@ -47,10 +47,10 @@ namespace AniDBmini
         private void OnInitialized(object sender, EventArgs e)
         {
             if (ConfigFile.Read("autoLogin").ToBoolean() &&
-                (m_aniDB = new AniDBAPI(ConfigFile.Read("server").ToString(),
-                                      ConfigFile.Read("port").ToInt32(),
-                                      ConfigFile.Read("localPort").ToInt32())).isConnected &&
-                m_aniDB.Login(ConfigFile.Read("username").ToString(), ConfigFile.Read("password").ToString()))
+                (m_aniDBAPI = new QueuedAniDBAPI(ConfigFile.Read("server").ToString(),
+                                              ConfigFile.Read("port").ToInt32(),
+                                              ConfigFile.Read("localPort").ToInt32())).Connected &&
+                m_aniDBAPI.Login(ConfigFile.Read("username").ToString(), ConfigFile.Read("password").ToString()))
             {
                 StartMainWindow();
             }
@@ -73,9 +73,9 @@ namespace AniDBmini
 
             loginButton.IsEnabled = false;
             string[] server = serverComboBox.SelectionBoxItem.ToString().Split(':');
-            m_aniDB = new AniDBAPI(server[0], int.Parse(server[1]), ConfigFile.Read("localPort").ToInt32());
+            m_aniDBAPI = new QueuedAniDBAPI(server[0], int.Parse(server[1]), ConfigFile.Read("localPort").ToInt32());
 
-            if (m_aniDB.isConnected && m_aniDB.Login(usernameTextBox.Text, passwordPasswordBox.Password))
+            if (m_aniDBAPI.Connected && m_aniDBAPI.Login(usernameTextBox.Text, passwordPasswordBox.Password))
             {
                 if (autoLoginCheckBox.IsChecked == true)
                 {
